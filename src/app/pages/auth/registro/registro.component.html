@@ -1,0 +1,78 @@
+<p-toast></p-toast>
+
+<div style="display: flex; justify-content: center; align-items: center; min-height: 80vh; padding: 2rem 0;">
+    <p-card header="Crear Cuenta" [style]="{ width: '500px', padding: '1rem' }">
+
+        <form [formGroup]="registroForm" (ngSubmit)="onRegistro()"
+            style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <div style="display: flex; gap: 1rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                    <label style="font-weight: 500;">Usuario</label>
+                    <input type="text" pInputText formControlName="usuario" />
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                    <label style="font-weight: 500;">Nombre Completo</label>
+                    <input type="text" pInputText formControlName="nombre" />
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                    <label style="font-weight: 500;">Correo Electrónico</label>
+                    <input type="email" pInputText formControlName="email" />
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                    <label style="font-weight: 500;">Teléfono (10 dígitos)</label>
+                    <input type="text" pInputText formControlName="telefono" />
+                    @if (registroForm.get('telefono')?.hasError('pattern') && registroForm.get('telefono')?.touched) {
+                    <small style="color: red;">Debe tener 10 números.</small>
+                    }
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                    <label style="font-weight: 500;">Dirección</label>
+                    <input type="text" pInputText formControlName="direccion" />
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                    <label style="font-weight: 500;">Fecha Nacimiento</label>
+                    <input type="date" pInputText formControlName="fechaNacimiento" />
+                    @if (registroForm.get('fechaNacimiento')?.hasError('minor') &&
+                    registroForm.get('fechaNacimiento')?.touched) {
+                    <small style="color: red;">Debes ser mayor de 18 años.</small>
+                    }
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label style="font-weight: 500;">Contraseña</label>
+                <p-password formControlName="password" [toggleMask]="true" [inputStyle]="{'width':'100%'}"
+                    [style]="{'width':'100%', 'display':'block'}"></p-password>
+                @if (registroForm.get('password')?.invalid && registroForm.get('password')?.touched) {
+                <small style="color: red;">Min 10 caracteres y 1 símbolo especial (!&#64;#$%^&*).</small>
+                }
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label style="font-weight: 500;">Confirmar Contraseña</label>
+                <p-password formControlName="confirmPassword" [toggleMask]="true" [feedback]="false"
+                    [inputStyle]="{'width':'100%'}" [style]="{'width':'100%', 'display':'block'}"></p-password>
+                @if (registroForm.hasError('mismatch') && registroForm.get('confirmPassword')?.touched) {
+                <small style="color: red;">Las contraseñas no coinciden.</small>
+                }
+            </div>
+
+            <p-button type="submit" label="Registrarme" [disabled]="registroForm.invalid"
+                [style]="{'width':'100%', 'margin-top': '0.5rem'}"></p-button>
+
+            <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+                <a routerLink="/login"
+                    style="text-decoration: none; font-weight: bold; color: var(--primary-color);">Inicia sesión
+                    aquí</a>
+            </div>
+        </form>
+
+    </p-card>
+</div>

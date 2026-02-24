@@ -1,0 +1,40 @@
+<p-toast></p-toast>
+<div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+    <p-card header="Iniciar Sesión" [style]="{ width: '380px', padding: '1rem' }">
+
+        <form [formGroup]="loginForm" (ngSubmit)="onLogin()"
+            style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label for="email" style="font-weight: 500;">Correo Electrónico</label>
+                <input id="email" type="email" pInputText formControlName="email" placeholder="ejemplo@correo.com" />
+                @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+                <small style="color: red;">Ingresa un correo válido.</small>
+                }
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label for="password" style="font-weight: 500;">Contraseña</label>
+                <p-password id="password" formControlName="password" [toggleMask]="true"
+                    placeholder="Escribe tu contraseña" [inputStyle]="{'width':'100%'}"
+                    [style]="{'width':'100%', 'display':'block'}"></p-password>
+                @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+                <small style="color: red;">La contraseña es obligatoria.</small>
+                }
+            </div>
+
+            <p-button type="submit" label="Ingresar" [disabled]="loginForm.invalid"
+                [style]="{'width':'100%', 'margin-top': '0.5rem'}"></p-button>
+
+            <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+                <p style="margin-bottom: 0.5rem; color: #666;">¿No tienes una cuenta?</p>
+                <a routerLink="/registro"
+                    style="text-decoration: none; font-weight: bold; color: var(--primary-color);">Regístrate aquí</a>
+            </div>
+            <div style="text-align: center; margin-top: 0.5rem;">
+                <p-button label="Volver al inicio" link="true" routerLink="/landing"></p-button>
+            </div>
+        </form>
+
+    </p-card>
+</div>
