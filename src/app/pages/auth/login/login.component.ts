@@ -12,7 +12,7 @@ import { MessageService } from 'primeng/api';
   selector: 'app-login',
   standalone: true,
   imports: [RouterLink, CardModule, InputTextModule, PasswordModule, ButtonModule, ReactiveFormsModule, ToastModule],
-  providers: [MessageService], // Necesario para el Toast
+  providers: [MessageService],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
@@ -41,7 +41,7 @@ export class LoginComponent {
     if (email === 'admin@uteq.edu.mx' && password === 'Admin123!') {
       this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Bienvenido al sistema' });
       // Redirigir al landing después de 1 segundo
-      setTimeout(() => this.router.navigate(['/landing']), 1000);
+      setTimeout(() => this.router.navigate(['/home']), 1000);
     } else {
       this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Credenciales incorrectas' });
     }
