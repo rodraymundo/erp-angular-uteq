@@ -1,24 +1,94 @@
-<h1 style="color: #333; margin-top: 0; margin-bottom: 2rem;">Grupos</h1>
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
 
-<div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 700px;">
+<h1 style="color: #333; margin-top: 0; margin-bottom: 2rem;">Gestión de Grupos</h1>
 
-    <p-card header="Total de Grupos" [style]="{ width: '100%' }">
-        <p style="font-size: 2.5rem; font-weight: bold; color: var(--primary-color); margin: 0;">5</p>
-        <p style="color: #666; margin-top: 0.5rem; margin-bottom: 0;">Grupos activos en el sistema</p>
-    </p-card>
+<p-card>
+    <p-toolbar styleClass="mb-4">
+        <ng-template pTemplate="left">
+            <p-button label="Nuevo Grupo" icon="pi pi-plus" severity="success" (onClick)="openNew()"></p-button>
+        </ng-template>
+    </p-toolbar>
 
-    <p-card header="Avance de Proyectos" [style]="{ width: '100%' }">
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span style="font-weight: 500; color: #333;">Grupo IDGS14</span>
-                    <span style="font-weight: bold; color: var(--primary-color);">85%</span>
+    <p-table [value]="groups" [paginator]="true" [rows]="5" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+            <tr>
+                <th>Nombre</th>
+                <th>Nivel</th>
+                <th>Autor</th>
+                <th>Integrantes</th>
+                <th>Tickets</th>
+                <th style="width: 150px">Acciones</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-group>
+            <tr>
+                <td style="font-weight: bold; color: var(--primary-color);">{{group.nombre}}</td>
+                <td>{{group.nivel}}</td>
+                <td>{{group.autor}}</td>
+                <td>{{group.integrantes}}</td>
+                <td>
+                    <span
+                        style="background-color: #f59e0b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85rem;">
+                        {{group.tickets}}
+                    </span>
+                </td>
+                <td>
+                    <p-button icon="pi pi-pencil" severity="info" [rounded]="true" [outlined]="true"
+                        [style]="{'margin-right': '0.5rem'}" (onClick)="editGroup(group)"></p-button>
+                    <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true"
+                        (onClick)="deleteGroup(group)"></p-button>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+</p-card>
+
+<p-dialog [(visible)]="groupDialog" [style]="{width: '500px'}" header="Detalles del Grupo" [modal]="true"
+    styleClass="p-fluid">
+    <ng-template pTemplate="content">
+        <form [formGroup]="groupForm" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+
+            <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label>Nombre del Grupo</label>
+                    <input type="text" pInputText formControlName="nombre" />
                 </div>
-                <div style="height: 12px; background-color: #eee; border-radius: 6px; overflow: hidden;">
-                    <div style="height: 100%; width: 85%; background-color: var(--primary-color);"></div>
+                <div style="flex: 1;">
+                    <label>Nivel</label>
+                    <input type="text" pInputText formControlName="nivel" />
                 </div>
             </div>
-        </div>
-    </p-card>
 
-</div>
+            <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label>Autor</label>
+                    <input type="text" pInputText formControlName="autor" readonly
+                        style="background-color: #f8f9fa; color: #6c757d;" />
+                </div>
+                <div style="flex: 1;">
+                    <label>Nivel de Tickets</label>
+                    <input type="number" pInputText formControlName="tickets" />
+                </div>
+            </div>
+
+            <div>
+                <label>Número de Integrantes</label>
+                <input type="number" pInputText formControlName="integrantes" />
+            </div>
+
+            <div>
+                <label>Descripción</label>
+                <input type="text" pInputText formControlName="descripcion" />
+            </div>
+
+        </form>
+    </ng-template>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
+            (onClick)="hideDialog()"></p-button>
+        <p-button label="Guardar" icon="pi pi-check" [text]="true" (onClick)="saveGroup()"
+            [disabled]="groupForm.invalid"></p-button>
+    </ng-template>
+</p-dialog>

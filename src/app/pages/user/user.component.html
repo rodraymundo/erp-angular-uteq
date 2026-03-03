@@ -1,14 +1,16 @@
-<h1 style="color: #333; margin-top: 0; margin-bottom: 2rem;">Usuarios</h1>
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+<h1 style="color: #333; margin-top: 0; margin-bottom: 2rem;">Mi Perfil</h1>
 
 <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
 
-    <p-card header="Datos del Perfil (Profile Data)" [style]="{ width: '450px' }">
+    <p-card header="Datos de la Cuenta" [style]="{ width: '450px' }">
         <div style="display: flex; flex-direction: column; gap: 1.5rem;">
 
             <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
                 <span
                     style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Usuario</span>
-                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.usuario }}</p>
+                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">&#64;{{ userData.usuario }}</p>
             </div>
 
             <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
@@ -41,7 +43,63 @@
                 <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.fechaNacimiento }}</p>
             </div>
 
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <p-button label="Editar" icon="pi pi-pencil" [style]="{'flex': '1'}"
+                    (onClick)="editProfile()"></p-button>
+                <p-button label="Eliminar" icon="pi pi-trash" severity="danger" [outlined]="true"
+                    [style]="{'flex': '1'}" (onClick)="confirmDelete()"></p-button>
+            </div>
+
         </div>
     </p-card>
 
 </div>
+
+<p-dialog [(visible)]="profileDialog" [style]="{width: '500px'}" header="Editar Mi Perfil" [modal]="true"
+    styleClass="p-fluid">
+    <ng-template pTemplate="content">
+        <form [formGroup]="profileForm" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+
+            <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label>Usuario</label>
+                    <input type="text" pInputText formControlName="usuario" />
+                </div>
+                <div style="flex: 1;">
+                    <label>Nombre Completo</label>
+                    <input type="text" pInputText formControlName="nombre" />
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label>Correo Electrónico</label>
+                    <input type="email" pInputText formControlName="email" />
+                </div>
+                <div style="flex: 1;">
+                    <label>Teléfono</label>
+                    <input type="text" pInputText formControlName="telefono" />
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label>Dirección</label>
+                    <input type="text" pInputText formControlName="direccion" />
+                </div>
+                <div style="flex: 1;">
+                    <label>Fecha de Nacimiento</label>
+                    <input type="date" pInputText formControlName="fechaNacimiento" />
+                </div>
+            </div>
+
+        </form>
+    </ng-template>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
+            (onClick)="hideDialog()"></p-button>
+        <p-button label="Guardar Cambios" icon="pi pi-check" [text]="true" (onClick)="saveProfile()"
+            [disabled]="profileForm.invalid"></p-button>
+    </ng-template>
+</p-dialog>
