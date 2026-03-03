@@ -23,6 +23,16 @@ export const routes: Routes = [
                 // Ruta vacía significa que al entrar a '/home' cargará esto por defecto en el <router-outlet> del MainLayout
                 path: '',
                 loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
+            },
+            {
+                // Ruta de Grupos (/home/group)
+                path: 'group',
+                loadComponent: () => import('./pages/group/group.component').then(m => m.GroupComponent)
+            },
+            {
+                // Ruta de Usuarios (/home/user)
+                path: 'user',
+                loadComponent: () => import('./pages/user/user.component').then(m => m.UserComponent)
             }
         ]
     }

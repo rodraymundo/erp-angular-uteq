@@ -1,0 +1,47 @@
+<h1 style="color: #333; margin-top: 0; margin-bottom: 2rem;">Usuarios</h1>
+
+<div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+
+    <p-card header="Datos del Perfil (Profile Data)" [style]="{ width: '450px' }">
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
+                <span
+                    style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Usuario</span>
+                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.usuario }}</p>
+            </div>
+
+            <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
+                <span style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Nombre
+                    Completo</span>
+                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.nombre }}</p>
+            </div>
+
+            <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
+                <span style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Correo
+                    Electrónico</span>
+                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.email }}</p>
+            </div>
+
+            <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
+                <span
+                    style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Teléfono</span>
+                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.telefono }}</p>
+            </div>
+
+            <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
+                <span
+                    style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Dirección</span>
+                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.direccion }}</p>
+            </div>
+
+            <div>
+                <span style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Fecha de
+                    Nacimiento</span>
+                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.fechaNacimiento }}</p>
+            </div>
+
+        </div>
+    </p-card>
+
+</div>

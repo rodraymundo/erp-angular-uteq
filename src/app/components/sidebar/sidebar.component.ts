@@ -12,8 +12,8 @@ import { MenuItem } from 'primeng/api';
 export class SidebarComponent {
   items: MenuItem[] = [
     { label: 'Panel Principal', icon: 'pi pi-home', routerLink: '/home' },
-    { label: 'Usuarios', icon: 'pi pi-users' },
-    { label: 'Configuración', icon: 'pi pi-cog' },
+    { label: 'Grupos', icon: 'pi pi-sitemap', routerLink: '/home/group' },
+    { label: 'Usuarios', icon: 'pi pi-user', routerLink: '/home/user' },
     { separator: true },
     { label: 'Cerrar Sesión', icon: 'pi pi-sign-out', routerLink: '/login' }
   ];
