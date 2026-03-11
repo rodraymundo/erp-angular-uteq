@@ -1,0 +1,81 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<h1 style="color: #333; margin-top: 0; margin-bottom: 2rem;">Gestión de Usuarios y Permisos</h1>
+
+<p-card>
+    <p-toolbar styleClass="mb-4">
+        <ng-template pTemplate="left">
+            <p-button *ifHasPermission="['users:create']" label="Nuevo Usuario" icon="pi pi-user-plus"
+                severity="success" (onClick)="openNew()"></p-button>
+        </ng-template>
+    </p-toolbar>
+
+    <p-table [value]="users" [paginator]="true" [rows]="5" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+            <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th style="width: 40%">Permisos Activos</th>
+                <th style="width: 150px">Acciones</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-user>
+            <tr>
+                <td style="font-weight: bold; color: var(--primary-color);">{{user.nombre}}</td>
+                <td>{{user.email}}</td>
+                <td>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+                        @for (permiso of user.permisos; track permiso) {
+                        <p-tag [value]="permiso" severity="info"></p-tag>
+                        }
+                        @if (!user.permisos || user.permisos.length === 0) {
+                        <span style="color: #999; font-style: italic;">Sin permisos especiales</span>
+                        }
+                    </div>
+                </td>
+                <td>
+                    <p-button *ifHasPermission="['users:edit']" icon="pi pi-pencil" severity="info" [rounded]="true"
+                        [outlined]="true" [style]="{'margin-right': '0.5rem'}" (onClick)="editUser(user)"></p-button>
+                    <p-button *ifHasPermission="['user:delete']" icon="pi pi-trash" severity="danger" [rounded]="true"
+                        [outlined]="true" (onClick)="deleteUser(user)"></p-button>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+</p-card>
+
+<p-dialog [(visible)]="userDialog" [style]="{width: '600px'}" header="Detalles del Usuario" [modal]="true"
+    styleClass="p-fluid">
+    <ng-template pTemplate="content">
+        <form [formGroup]="userForm" style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1rem;">
+
+            <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label>Nombre Completo</label>
+                    <input type="text" pInputText formControlName="nombre" />
+                </div>
+                <div style="flex: 1;">
+                    <label>Correo Electrónico</label>
+                    <input type="email" pInputText formControlName="email" />
+                </div>
+            </div>
+
+            <div>
+                <label>Asignar Permisos del Sistema</label>
+                <p-multiSelect [options]="availablePermissions" formControlName="permisos" optionLabel="label"
+                    optionValue="value" placeholder="Seleccionar permisos..." display="chip" [filter]="true"
+                    filterPlaceHolder="Buscar permiso..." [style]="{'width':'100%', 'margin-top':'0.5rem'}">
+                </p-multiSelect>
+            </div>
+
+        </form>
+    </ng-template>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
+            (onClick)="hideDialog()"></p-button>
+        <p-button label="Guardar" icon="pi pi-check" [text]="true" (onClick)="saveUser()"
+            [disabled]="userForm.invalid"></p-button>
+    </ng-template>
+</p-dialog>

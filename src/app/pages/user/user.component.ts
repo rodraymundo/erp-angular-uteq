@@ -9,10 +9,15 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
+// --- NUEVAS IMPORTACIONES PARA LA TABLA ---
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+
 @Component({
   selector: 'app-user',
   standalone: true,
-  imports: [CardModule, ButtonModule, DialogModule, InputTextModule, ToastModule, ReactiveFormsModule, ConfirmDialogModule],
+  // Aquí agregamos TableModule y TagModule
+  imports: [CardModule, ButtonModule, DialogModule, InputTextModule, ToastModule, ReactiveFormsModule, ConfirmDialogModule, TableModule, TagModule],
   providers: [MessageService, ConfirmationService],
   templateUrl: './user.component.html',
   styleUrl: './user.component.css'
@@ -21,6 +26,10 @@ export class UserComponent implements OnInit {
   userData: any = {};
   profileDialog: boolean = false;
   profileForm!: FormGroup;
+
+  // Nuevas variables para cumplir con el Requerimiento 6 del PDF
+  misTicketsAsignados: any[] = [];
+  statsTickets = { abiertos: 0, progreso: 0, hechos: 0 };
 
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
@@ -45,8 +54,21 @@ export class UserComponent implements OnInit {
       direccion: ['', Validators.required],
       fechaNacimiento: ['', Validators.required]
     });
+
+    // Simulamos que el sistema busca tus tickets en la base de datos
+    this.misTicketsAsignados = [
+      { id: 'T-01', titulo: 'Diseñar BD', estado: 'En Progreso', prioridad: 'Alta', grupo: 'IDGS14' },
+      { id: 'T-05', titulo: 'Corregir Login', estado: 'Pendiente', prioridad: 'Media', grupo: 'IDGS14' },
+      { id: 'T-12', titulo: 'Desplegar Servidor', estado: 'Finalizado', prioridad: 'Alta', grupo: 'ITIC91' }
+    ];
+
+    // Calculamos las estadísticas reales
+    this.statsTickets.abiertos = this.misTicketsAsignados.filter(t => t.estado === 'Pendiente').length;
+    this.statsTickets.progreso = this.misTicketsAsignados.filter(t => t.estado === 'En Progreso').length;
+    this.statsTickets.hechos = this.misTicketsAsignados.filter(t => t.estado === 'Finalizado').length;
   }
 
+  // --- MÉTODOS DEL PERFIL ---
   editProfile() {
     this.profileForm.patchValue(this.userData);
     this.profileDialog = true;
@@ -64,7 +86,6 @@ export class UserComponent implements OnInit {
     this.profileDialog = false;
   }
 
-  // LÓGICA DE ELIMINACIÓN
   confirmDelete() {
     this.confirmationService.confirm({
       message: '¿Estás seguro de que deseas eliminar tu perfil de forma permanente? Esta acción no se puede deshacer.',
@@ -74,10 +95,7 @@ export class UserComponent implements OnInit {
       rejectLabel: 'Cancelar',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        // Mostramos el mensaje de éxito
         this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: 'Tu perfil ha sido eliminado', life: 3000 });
-
-        // Simulamos que se borra y redirigimos al login después de 1.5 segundos
         setTimeout(() => {
           this.router.navigate(['/login']);
         }, 1500);

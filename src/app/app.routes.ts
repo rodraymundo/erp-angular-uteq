@@ -25,14 +25,24 @@ export const routes: Routes = [
                 loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
             },
             {
-                // Ruta de Grupos (/home/group)
+                // Ruta para ver la tabla con todos los grupos (CRUD)
                 path: 'group',
+                loadComponent: () => import('./pages/group/group.component').then(m => m.GroupComponent)
+            },
+            {
+                // Ruta para abrir automáticamente el Kanban de un grupo específico
+                path: 'group/:id',
                 loadComponent: () => import('./pages/group/group.component').then(m => m.GroupComponent)
             },
             {
                 // Ruta de Usuarios (/home/user)
                 path: 'user',
                 loadComponent: () => import('./pages/user/user.component').then(m => m.UserComponent)
+            },
+            {
+                // Ruta para la Gestión de Usuarios (Admin)
+                path: 'users',
+                loadComponent: () => import('./pages/user-management/user-management.component').then(m => m.UserManagementComponent)
             }
         ]
     }

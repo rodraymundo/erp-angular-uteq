@@ -55,6 +55,46 @@
 
 </div>
 
+<div style="display: flex; flex-direction: column; gap: 1.5rem; flex: 1; min-width: 400px;">
+
+    <div style="display: flex; gap: 1rem;">
+        <p-card [style]="{ flex: 1, 'text-align': 'center', 'border-top': '4px solid #64748b' }">
+            <h2 style="margin: 0; font-size: 2rem;">{{statsTickets.abiertos}}</h2>
+            <p style="margin: 0; color: #666;">Abiertos</p>
+        </p-card>
+        <p-card [style]="{ flex: 1, 'text-align': 'center', 'border-top': '4px solid #3b82f6' }">
+            <h2 style="margin: 0; font-size: 2rem;">{{statsTickets.progreso}}</h2>
+            <p style="margin: 0; color: #666;">En Progreso</p>
+        </p-card>
+        <p-card [style]="{ flex: 1, 'text-align': 'center', 'border-top': '4px solid #22c55e' }">
+            <h2 style="margin: 0; font-size: 2rem;">{{statsTickets.hechos}}</h2>
+            <p style="margin: 0; color: #666;">Hechos</p>
+        </p-card>
+    </div>
+
+    <p-card header="Mis Tickets Asignados">
+        <p-table [value]="misTicketsAsignados" [rows]="5">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Estado</th>
+                    <th>Grupo</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-t>
+                <tr>
+                    <td style="font-weight: bold; color: #3b82f6;">{{t.id}}</td>
+                    <td>{{t.titulo}}</td>
+                    <td>{{t.estado}}</td>
+                    <td><p-tag severity="secondary" [value]="t.grupo"></p-tag></td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </p-card>
+
+</div>
+
 <p-dialog [(visible)]="profileDialog" [style]="{width: '500px'}" header="Editar Mi Perfil" [modal]="true"
     styleClass="p-fluid">
     <ng-template pTemplate="content">

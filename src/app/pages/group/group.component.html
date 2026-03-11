@@ -1,15 +1,16 @@
 <p-toast></p-toast>
 <p-confirmDialog></p-confirmDialog>
 
+@if (!selectedGroupForBoard) {
+@if (permsSvc.hasPermission('group:view')) {
 <h1 style="color: #333; margin-top: 0; margin-bottom: 2rem;">Gestión de Grupos</h1>
-
 <p-card>
     <p-toolbar styleClass="mb-4">
         <ng-template pTemplate="left">
-            <p-button label="Nuevo Grupo" icon="pi pi-plus" severity="success" (onClick)="openNew()"></p-button>
+            <p-button *ifHasPermission="['group:add']" label="Nuevo Grupo" icon="pi pi-plus" severity="success"
+                (onClick)="openNewGroup()"></p-button>
         </ng-template>
     </p-toolbar>
-
     <p-table [value]="groups" [paginator]="true" [rows]="5" responsiveLayout="scroll">
         <ng-template pTemplate="header">
             <tr>
@@ -17,8 +18,7 @@
                 <th>Nivel</th>
                 <th>Autor</th>
                 <th>Integrantes</th>
-                <th>Tickets</th>
-                <th style="width: 150px">Acciones</th>
+                <th style="width: 200px">Acciones</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-group>
@@ -28,67 +28,269 @@
                 <td>{{group.autor}}</td>
                 <td>{{group.integrantes}}</td>
                 <td>
-                    <span
-                        style="background-color: #f59e0b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.85rem;">
-                        {{group.tickets}}
-                    </span>
-                </td>
-                <td>
-                    <p-button icon="pi pi-pencil" severity="info" [rounded]="true" [outlined]="true"
-                        [style]="{'margin-right': '0.5rem'}" (onClick)="editGroup(group)"></p-button>
-                    <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true"
-                        (onClick)="deleteGroup(group)"></p-button>
+                    <p-button icon="pi pi-external-link" severity="secondary" [rounded]="true" [outlined]="true"
+                        [style]="{'margin-right': '0.5rem'}" pTooltip="Ver Tablero"
+                        (onClick)="abrirTablero(group)"></p-button>
+                    <p-button *ifHasPermission="['group:edit']" icon="pi pi-pencil" severity="info" [rounded]="true"
+                        [outlined]="true" [style]="{'margin-right': '0.5rem'}" (onClick)="editGroup(group)"></p-button>
+                    <p-button *ifHasPermission="['group:delete']" icon="pi pi-trash" severity="danger" [rounded]="true"
+                        [outlined]="true" (onClick)="deleteGroup(group)"></p-button>
                 </td>
             </tr>
         </ng-template>
     </p-table>
 </p-card>
+} @else {
+<div style="text-align: center; padding: 4rem;">
+    <i class="pi pi-lock" style="font-size: 3rem; color: #ccc; margin-bottom: 1rem;"></i>
+    <h2 style="color: #666;">No tienes acceso a la Gestión de Grupos</h2>
+    <p-button label="Volver al Inicio" routerLink="/home"></p-button>
+</div>
+}
+}
+
+@if (selectedGroupForBoard) {
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1rem;">
+    <div>
+        <p-button icon="pi pi-arrow-left"
+            [label]="permsSvc.hasPermission('group:view') ? 'Volver a Grupos' : 'Volver al Inicio'" [text]="true"
+            (onClick)="cerrarTablero()" [style]="{'padding-left':'0'}"></p-button>
+        <h1 style="color: #333; margin: 0 0 0.5rem 0;">Tablero: {{selectedGroupForBoard.nombre}}</h1>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <p-selectButton [options]="viewOptions" [(ngModel)]="selectedView" optionLabel="label" optionValue="value">
+            <ng-template let-item pTemplate><i [class]="item.icon"
+                    style="margin-right: 0.5rem"></i>{{item.label}}</ng-template>
+        </p-selectButton>
+        <p-button *ifHasPermission="['ticket:create']" label="Crear Ticket" icon="pi pi-plus"
+            (onClick)="openCreateTicket()"></p-button>
+    </div>
+</div>
+
+<div
+    style="display: flex; gap: 0.5rem; margin-bottom: 2rem; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+    <span style="font-weight: bold; margin-right: 1rem; align-self: center;">Filtros:</span>
+    <p-button label="Todos" [outlined]="filtroActivo !== 'todos'" (onClick)="aplicarFiltro('todos')"></p-button>
+    <p-button label="Mis Tickets" icon="pi pi-user" severity="info" [outlined]="filtroActivo !== 'mis_tickets'"
+        (onClick)="aplicarFiltro('mis_tickets')"></p-button>
+    <p-button label="Sin Asignar" icon="pi pi-question-circle" severity="secondary"
+        [outlined]="filtroActivo !== 'sin_asignar'" (onClick)="aplicarFiltro('sin_asignar')"></p-button>
+    <p-button label="Prioridad Alta" icon="pi pi-exclamation-circle" severity="danger"
+        [outlined]="filtroActivo !== 'alta'" (onClick)="aplicarFiltro('alta')"></p-button>
+</div>
+
+@if (selectedView === 'kanban') {
+<div style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem; margin-bottom: 2rem;">
+    @for (estado of estados; track estado) {
+    <div pDroppable="tickets" (onDrop)="drop(estado)"
+        style="min-width: 300px; background-color: #f8fafc; padding: 1rem; border-radius: 8px; border: 2px dashed transparent;"
+        [ngStyle]="{'border-color': draggedTicket ? '#cbd5e1' : 'transparent'}">
+        <h3 style="margin-top: 0; color: #475569; border-bottom: 2px solid #cbd5e1; padding-bottom: 0.5rem;">{{estado}}
+            ({{getTicketsByStatus(estado).length}})</h3>
+        <div style="display: flex; flex-direction: column; gap: 1rem; min-height: 100px;">
+            @for (ticket of getTicketsByStatus(estado); track ticket.id) {
+            <div pDraggable="tickets" (onDragStart)="dragStart(ticket)" (onDragEnd)="dragEnd()">
+                <p-card [style]="{ cursor: 'grab', 'box-shadow': '0 2px 4px rgba(0,0,0,0.05)' }">
+                    <div (click)="openTicketDetail(ticket)">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="font-weight: bold; color: #3b82f6;">{{ticket.id}}</span>
+                            <p-tag [severity]="getSeverity(ticket.prioridad)" [value]="ticket.prioridad"></p-tag>
+                        </div>
+                        <p style="margin: 0 0 1rem 0; font-weight: 500;">{{ticket.titulo}}</p>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #64748b;">
+                            <span><i class="pi pi-user"></i> {{ticket.asignadoA || 'Sin asignar'}}</span>
+                        </div>
+                    </div>
+                </p-card>
+            </div>
+            }
+        </div>
+    </div>
+    }
+</div>
+}
+
+@if (selectedView === 'list') {
+<p-card [style]="{'margin-bottom': '2rem'}">
+    <p-table [value]="getTicketsFiltrados()" [paginator]="true" [rows]="5" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+            <tr>
+                <th pSortableColumn="id">ID</th>
+                <th pSortableColumn="titulo">Título</th>
+                <th pSortableColumn="estado">Estado</th>
+                <th pSortableColumn="prioridad">Prioridad</th>
+                <th>Asignado a</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-t>
+            <tr style="cursor: pointer" (click)="openTicketDetail(t)">
+                <td style="font-weight: bold; color: #3b82f6;">{{t.id}}</td>
+                <td>{{t.titulo}}</td>
+                <td>{{t.estado}}</td>
+                <td><p-tag [severity]="getSeverity(t.prioridad)" [value]="t.prioridad"></p-tag></td>
+                <td>{{t.asignadoA || 'Sin Asignar'}}</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</p-card>
+}
+
+<p-card header="Miembros del Grupo">
+    <div style="display: flex; gap: 2rem;">
+        <div style="flex: 1;">
+            <div *ifHasPermission="['group-user:add']">
+                <p>Añadir usuario por email o nombre</p>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input pInputText [(ngModel)]="nuevoMiembroEmail" placeholder="ejemplo@correo.com"
+                        style="flex: 1;" />
+                    <p-button icon="pi pi-user-plus" label="Añadir" (onClick)="agregarMiembro()"></p-button>
+                </div>
+            </div>
+            <div *ifHasPermission="['!group-user:add']"
+                style="padding: 1rem; background: #f8fafc; border-radius: 6px; color: #64748b;">
+                <i class="pi pi-lock" style="margin-right: 0.5rem;"></i> No tienes permisos para añadir miembros.
+            </div>
+        </div>
+        <div style="flex: 2;">
+            <p-table [value]="usuariosGrupo" [rows]="3">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Usuario</th>
+                        <th style="width: 100px">Acción</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-user>
+                    <tr>
+                        <td><i class="pi pi-user" style="color: #888; margin-right: 0.5rem;"></i> {{user}}</td>
+                        <td><p-button *ifHasPermission="['group-user:delete']" icon="pi pi-trash" severity="danger"
+                                [text]="true" (onClick)="eliminarMiembro(user)"></p-button></td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+</p-card>
+}
 
 <p-dialog [(visible)]="groupDialog" [style]="{width: '500px'}" header="Detalles del Grupo" [modal]="true"
     styleClass="p-fluid">
     <ng-template pTemplate="content">
         <form [formGroup]="groupForm" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-
             <div style="display: flex; gap: 1rem;">
-                <div style="flex: 1;">
-                    <label>Nombre del Grupo</label>
-                    <input type="text" pInputText formControlName="nombre" />
-                </div>
-                <div style="flex: 1;">
-                    <label>Nivel</label>
-                    <input type="text" pInputText formControlName="nivel" />
-                </div>
+                <div style="flex: 1;"><label>Nombre</label><input pInputText formControlName="nombre" /></div>
+                <div style="flex: 1;"><label>Nivel</label><input pInputText formControlName="nivel" /></div>
             </div>
-
             <div style="display: flex; gap: 1rem;">
-                <div style="flex: 1;">
-                    <label>Autor</label>
-                    <input type="text" pInputText formControlName="autor" readonly
-                        style="background-color: #f8f9fa; color: #6c757d;" />
-                </div>
-                <div style="flex: 1;">
-                    <label>Nivel de Tickets</label>
-                    <input type="number" pInputText formControlName="tickets" />
-                </div>
+                <div style="flex: 1;"><label>Autor</label><input pInputText formControlName="autor" readonly
+                        style="background-color: #f8f9fa;" /></div>
+                <div style="flex: 1;"><label>Integrantes</label><input type="number" pInputText
+                        formControlName="integrantes" /></div>
             </div>
-
-            <div>
-                <label>Número de Integrantes</label>
-                <input type="number" pInputText formControlName="integrantes" />
-            </div>
-
-            <div>
-                <label>Descripción</label>
-                <input type="text" pInputText formControlName="descripcion" />
-            </div>
-
+            <div><label>Descripción</label><input pInputText formControlName="descripcion" /></div>
         </form>
     </ng-template>
-
     <ng-template pTemplate="footer">
         <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
-            (onClick)="hideDialog()"></p-button>
+            (onClick)="hideGroupDialog()"></p-button>
         <p-button label="Guardar" icon="pi pi-check" [text]="true" (onClick)="saveGroup()"
             [disabled]="groupForm.invalid"></p-button>
     </ng-template>
+</p-dialog>
+
+<p-dialog [(visible)]="displayTicketModal" [style]="{width: '850px'}"
+    [header]="selectedTicket?.id + ' - ' + selectedTicket?.titulo" [modal]="true">
+    @if (selectedTicket) {
+    <div style="display: flex; gap: 2rem;">
+        <div style="flex: 2;">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <p-tag [severity]="getSeverity(selectedTicket.prioridad)"
+                    [value]="'Prioridad: ' + selectedTicket.prioridad"></p-tag>
+                <p-tag severity="info" [value]="'Estado: ' + selectedTicket.estado"></p-tag>
+            </div>
+            <h4 style="margin-top: 0;">Descripción</h4>
+            <p style="color: #555; background: #f9f9f9; padding: 1rem; border-radius: 6px;">
+                {{selectedTicket.descripcion}}</p>
+
+            <div
+                style="display: flex; justify-content: space-between; background-color: #f8fafc; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
+                <div>
+                    <p style="margin: 0 0 0.5rem 0;"><b>Asignado a:</b> <br>{{selectedTicket.asignadoA || 'Sin
+                        asignar'}}</p>
+                </div>
+                <div>
+                    <p style="margin: 0 0 0.5rem 0;"><b>Fecha Creación:</b> <br>{{selectedTicket.fechaCreacion | date}}
+                    </p>
+                </div>
+                <div>
+                    <p style="margin: 0;"><b>Fecha Límite:</b> <br>{{selectedTicket.fechaLimite | date}}</p>
+                </div>
+            </div>
+
+            <h4 style="margin-top: 1.5rem;">Comentarios</h4>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                <input pInputText [(ngModel)]="nuevoComentario" placeholder="Escribe un comentario..." style="flex: 1;"
+                    (keyup.enter)="agregarComentario()" />
+                <p-button icon="pi pi-send" (onClick)="agregarComentario()"></p-button>
+            </div>
+
+            <div style="max-height: 200px; overflow-y: auto;">
+                @for (comentario of selectedTicket.comentarios; track comentario) {
+                <div
+                    style="background-color: #f1f5f9; padding: 0.8rem; border-radius: 6px; margin-bottom: 0.5rem; color: #475569;">
+                    <i class="pi pi-comment" style="margin-right: 0.5rem; color: #94a3b8;"></i> <b>{{loggedUser}}:</b>
+                    {{comentario}}
+                </div>
+                }
+                @if (selectedTicket.comentarios?.length === 0) {
+                <p style="color: #999; font-style: italic;">No hay comentarios aún.</p>
+                }
+            </div>
+        </div>
+
+        <div style="flex: 1; border-left: 1px solid #eee; padding-left: 1.5rem;">
+            <h4 style="margin-top: 0;">Historial de Cambios</h4>
+            <p-timeline [value]="selectedTicket.historial">
+                <ng-template pTemplate="content" let-event>
+                    <small style="color: #888; display: block;">{{event.date}}</small>
+                    <span style="font-weight: 500; font-size: 0.9rem;">{{event.status}}</span>
+                    <small style="color: var(--primary-color); display: block;">por {{event.user}}</small>
+                </ng-template>
+            </p-timeline>
+        </div>
+    </div>
+    }
+    <ng-template pTemplate="footer">
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+            <p-button *ifHasPermission="['ticket:delete']" label="Eliminar" icon="pi pi-trash" severity="danger"
+                [outlined]="true" (onClick)="deleteTicket(selectedTicket)"></p-button>
+            <div style="display: flex; gap: 0.5rem;">
+                <p-button label="Cerrar" icon="pi pi-times" [text]="true" severity="secondary"
+                    (onClick)="displayTicketModal = false"></p-button>
+                <p-button *ifHasPermission="['ticket:edit']" label="Editar Ticket" icon="pi pi-pencil" severity="info"
+                    (onClick)="editTicket(selectedTicket)"></p-button>
+            </div>
+        </div>
+    </ng-template>
+</p-dialog>
+
+<p-dialog [(visible)]="displayCreateModal" [style]="{width: '500px'}"
+    [header]="isEditTicket ? 'Editar Ticket' : 'Crear Nuevo Ticket'" [modal]="true" styleClass="p-fluid">
+    <form [formGroup]="ticketForm" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+        <div><label>Título del Ticket</label><input pInputText formControlName="titulo" /></div>
+        <div><label>Descripción</label><textarea pInputTextarea formControlName="descripcion" rows="3"></textarea></div>
+        <div style="display: flex; gap: 1rem;">
+            <div style="flex: 1;"><label>Estado</label><p-dropdown [options]="estados"
+                    formControlName="estado"></p-dropdown></div>
+            <div style="flex: 1;"><label>Prioridad</label><p-dropdown [options]="prioridades"
+                    formControlName="prioridad"></p-dropdown></div>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <div style="flex: 1;"><label>Asignar a:</label><p-dropdown [options]="usuariosGrupo"
+                    formControlName="asignadoA" placeholder="Sin Asignar" [showClear]="true"></p-dropdown></div>
+            <div style="flex: 1;"><label>Fecha Límite</label><input type="date" pInputText
+                    formControlName="fechaLimite" /></div>
+        </div>
+        <p-button [label]="isEditTicket ? 'Guardar Cambios' : 'Crear Ticket'" (onClick)="saveTicket()"
+            [disabled]="ticketForm.invalid" [style]="{'margin-top': '0.5rem'}"></p-button>
+    </form>
 </p-dialog>
