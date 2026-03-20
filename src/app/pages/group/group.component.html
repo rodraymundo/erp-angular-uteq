@@ -2,7 +2,7 @@
 <p-confirmDialog></p-confirmDialog>
 
 @if (!selectedGroupForBoard) {
-@if (permsSvc.hasPermission('group:view')) {
+@if (permsSvc.hasPermission('group:manage')) {
 <h1 style="color: #333; margin-top: 0; margin-bottom: 2rem;">Gestión de Grupos</h1>
 <p-card>
     <p-toolbar styleClass="mb-4">
@@ -53,7 +53,7 @@
 <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1rem;">
     <div>
         <p-button icon="pi pi-arrow-left"
-            [label]="permsSvc.hasPermission('group:view') ? 'Volver a Grupos' : 'Volver al Inicio'" [text]="true"
+            [label]="permsSvc.hasPermission('group:manage') ? 'Volver a Grupos' : 'Volver al Inicio'" [text]="true"
             (onClick)="cerrarTablero()" [style]="{'padding-left':'0'}"></p-button>
         <h1 style="color: #333; margin: 0 0 0.5rem 0;">Tablero: {{selectedGroupForBoard.nombre}}</h1>
     </div>
@@ -62,7 +62,7 @@
             <ng-template let-item pTemplate><i [class]="item.icon"
                     style="margin-right: 0.5rem"></i>{{item.label}}</ng-template>
         </p-selectButton>
-        <p-button *ifHasPermission="['ticket:create']" label="Crear Ticket" icon="pi pi-plus"
+        <p-button *ifHasPermission="['ticket:add']" label="Crear Ticket" icon="pi pi-plus"
             (onClick)="openCreateTicket()"></p-button>
     </div>
 </div>
@@ -138,7 +138,7 @@
 <p-card header="Miembros del Grupo">
     <div style="display: flex; gap: 2rem;">
         <div style="flex: 1;">
-            <div *ifHasPermission="['group-user:add']">
+            <div *ifHasPermission="['group:manage']">
                 <p>Añadir usuario por email o nombre</p>
                 <div style="display: flex; gap: 0.5rem;">
                     <input pInputText [(ngModel)]="nuevoMiembroEmail" placeholder="ejemplo@correo.com"
@@ -146,7 +146,7 @@
                     <p-button icon="pi pi-user-plus" label="Añadir" (onClick)="agregarMiembro()"></p-button>
                 </div>
             </div>
-            <div *ifHasPermission="['!group-user:add']"
+            <div *ifHasPermission="['!group:manage']"
                 style="padding: 1rem; background: #f8fafc; border-radius: 6px; color: #64748b;">
                 <i class="pi pi-lock" style="margin-right: 0.5rem;"></i> No tienes permisos para añadir miembros.
             </div>
@@ -227,7 +227,7 @@
             </div>
 
             <h4 style="margin-top: 1.5rem;">Comentarios</h4>
-            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <div *ifHasPermission="['ticket:edit:comment']" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
                 <input pInputText [(ngModel)]="nuevoComentario" placeholder="Escribe un comentario..." style="flex: 1;"
                     (keyup.enter)="agregarComentario()" />
                 <p-button icon="pi pi-send" (onClick)="agregarComentario()"></p-button>

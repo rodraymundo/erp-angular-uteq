@@ -8,6 +8,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
+import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
 // --- NUEVAS IMPORTACIONES PARA LA TABLA ---
 import { TableModule } from 'primeng/table';
@@ -17,7 +18,7 @@ import { TagModule } from 'primeng/tag';
   selector: 'app-user',
   standalone: true,
   // Aquí agregamos TableModule y TagModule
-  imports: [CardModule, ButtonModule, DialogModule, InputTextModule, ToastModule, ReactiveFormsModule, ConfirmDialogModule, TableModule, TagModule],
+  imports: [CardModule, ButtonModule, DialogModule, InputTextModule, ToastModule, ReactiveFormsModule, ConfirmDialogModule, TableModule, TagModule, HasPermissionDirective],
   providers: [MessageService, ConfirmationService],
   templateUrl: './user.component.html',
   styleUrl: './user.component.css'

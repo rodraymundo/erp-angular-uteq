@@ -127,7 +127,7 @@ export class GroupComponent implements OnInit {
     ];
   }
   cerrarTablero() {
-    if (this.permsSvc.hasPermission('group:view')) {
+    if (this.permsSvc.hasPermission('group:manage')) {
       this.router.navigate(['/home/group']);
     } else {
       this.router.navigate(['/home']);
@@ -153,9 +153,17 @@ export class GroupComponent implements OnInit {
   getSeverity(prioridad: string) { switch (prioridad) { case 'Alta': return 'danger'; case 'Media': return 'warning'; case 'Baja': return 'info'; default: return 'success'; } }
 
   // --- DRAG AND DROP ---
+  // --- DRAG AND DROP ---
   dragStart(ticket: any) {
-    this.draggedTicket = ticket;
+    // Solo permitimos mover si tiene edit:state o manage
+    if (this.permsSvc.hasAnyPermission(['ticket:edit:state', 'ticket:manage'])) {
+      this.draggedTicket = ticket;
+    } else {
+      this.draggedTicket = null;
+      this.messageService.add({ severity: 'warn', summary: 'Acceso Denegado', detail: 'No tienes permiso para cambiar el estado del ticket.' });
+    }
   }
+
   drop(estadoDestino: string) {
     if (this.draggedTicket && this.draggedTicket.estado !== estadoDestino) {
       // Registrar en el historial el movimiento
@@ -169,7 +177,14 @@ export class GroupComponent implements OnInit {
   }
 
   // --- CRUD TICKETS Y COMENTARIOS ---
-  openTicketDetail(ticket: any) { this.selectedTicket = ticket; this.displayTicketModal = true; }
+  openTicketDetail(ticket: any) {
+    if (this.permsSvc.hasPermission('ticket:view')) {
+      this.selectedTicket = ticket;
+      this.displayTicketModal = true;
+    } else {
+      this.messageService.add({ severity: 'warn', summary: 'Denegado', detail: 'No tienes permiso para ver los detalles.' });
+    }
+  }
   openCreateTicket() { this.isEditTicket = false; this.ticketForm.reset({ estado: 'Pendiente' }); this.displayCreateModal = true; }
 
   agregarComentario() {

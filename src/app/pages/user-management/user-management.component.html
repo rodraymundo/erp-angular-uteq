@@ -6,8 +6,8 @@
 <p-card>
     <p-toolbar styleClass="mb-4">
         <ng-template pTemplate="left">
-            <p-button *ifHasPermission="['users:create']" label="Nuevo Usuario" icon="pi pi-user-plus"
-                severity="success" (onClick)="openNew()"></p-button>
+            <p-button *ifHasPermission="['user:add']" label="Nuevo Usuario" icon="pi pi-user-plus" severity="success"
+                (onClick)="openNew()"></p-button>
         </ng-template>
     </p-toolbar>
 
@@ -35,10 +35,12 @@
                     </div>
                 </td>
                 <td>
-                    <p-button *ifHasPermission="['users:edit']" icon="pi pi-pencil" severity="info" [rounded]="true"
-                        [outlined]="true" [style]="{'margin-right': '0.5rem'}" (onClick)="editUser(user)"></p-button>
+                    <p-button *ifHasPermission="['user:edit']" icon="pi pi-pencil" severity="info" [rounded]="true"
+                        [outlined]="true" [style]="{'margin-right': '0.5rem'}" (onClick)="editUser(user)">
+                    </p-button>
                     <p-button *ifHasPermission="['user:delete']" icon="pi pi-trash" severity="danger" [rounded]="true"
-                        [outlined]="true" (onClick)="deleteUser(user)"></p-button>
+                        [outlined]="true" (onClick)="deleteUser(user)">
+                    </p-button>
                 </td>
             </tr>
         </ng-template>

@@ -29,20 +29,29 @@ export class UserManagementComponent implements OnInit {
   currentUserId: number | null = null;
 
   // Lista de todos los permisos disponibles en el sistema
+  // Lista oficial de permisos del sistema
   availablePermissions = [
-    { label: 'Ver Grupos', value: 'group:view' },
-    { label: 'Crear Grupos', value: 'group:add' },
-    { label: 'Editar Grupos', value: 'group:edit' },
-    { label: 'Eliminar Grupos', value: 'group:delete' },
-    { label: 'Eliminar usuarios de un grupo', value: 'group-user:delete' },
-    { label: 'Añadir Miembros a un grupo', value: 'group-user:add' },
-    { label: 'Admin Usuarios', value: 'users:view' },
-    { label: 'Crear Usuarios', value: 'users:create' },
-    { label: 'Editar Usuarios', value: 'users:edit' },
-    { label: 'Eliminar Usuarios', value: 'user:delete' },
-    { label: 'Crear Tickets', value: 'ticket:create' },
-    { label: 'Editar Tickets', value: 'ticket:edit' },
-    { label: 'Eliminar Tickets', value: 'ticket:delete' }
+    // USERS (6)
+    { label: 'Ver "Mi Perfil"', value: 'user:view' },
+    { label: 'Crear usuarios', value: 'user:add' },
+    { label: 'Editar usuarios', value: 'user:edit' },
+    { label: 'Editar mi perfil', value: 'user:edit:profile' },
+    { label: 'Eliminar usuarios', value: 'user:delete' },
+    { label: 'Admin. Gestión Usuarios', value: 'user:manage' },
+    // GROUPS (5)
+    { label: 'Ver grupos en dashboard', value: 'group:view' },
+    { label: 'Crear grupos', value: 'group:add' },
+    { label: 'Editar grupos', value: 'group:edit' },
+    { label: 'Eliminar grupos', value: 'group:delete' },
+    { label: 'Admin. Sidebar y Miembros', value: 'group:manage' },
+    // TICKETS (7)
+    { label: 'Ver detalle de tickets', value: 'ticket:view' },
+    { label: 'Crear tickets', value: 'ticket:add' },
+    { label: 'Editar tickets', value: 'ticket:edit' },
+    { label: 'Eliminar tickets', value: 'ticket:delete' },
+    { label: 'Cambiar estado (Drag/Drop)', value: 'ticket:edit:state' },
+    { label: 'Comentar en tickets', value: 'ticket:edit:comment' },
+    { label: 'Admin. Tickets (Forzar mover)', value: 'ticket:manage' }
   ];
 
   private fb = inject(FormBuilder);

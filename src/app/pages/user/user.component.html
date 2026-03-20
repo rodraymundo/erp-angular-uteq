@@ -44,10 +44,10 @@
             </div>
 
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                <p-button label="Editar" icon="pi pi-pencil" [style]="{'flex': '1'}"
-                    (onClick)="editProfile()"></p-button>
-                <p-button label="Eliminar" icon="pi pi-trash" severity="danger" [outlined]="true"
-                    [style]="{'flex': '1'}" (onClick)="confirmDelete()"></p-button>
+                <p-button *ifHasPermission="['user:edit:profile']" label="Editar" icon="pi pi-pencil"
+                    [style]="{'flex': '1'}" (onClick)="editProfile()"></p-button>
+                <p-button *ifHasPermission="['user:delete']" label="Eliminar" icon="pi pi-trash" severity="danger"
+                    [outlined]="true" [style]="{'flex': '1'}" (onClick)="confirmDelete()"></p-button>
             </div>
 
         </div>

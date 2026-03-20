@@ -4,20 +4,32 @@ import { Injectable, signal } from '@angular/core';
   providedIn: 'root'
 })
 export class PermissionsService {
-  // Lista simple de permisos del usuario (simulando los que vienen del JWT)
   private userPermissions = signal<string[]>([]);
 
-  // Cargar permisos al login
-  setPermissions(perms: string[]) {
-    this.userPermissions.set(perms);
+  constructor() {
+    // Al cargar la app, revisamos si ya había permisos guardados (sobrevive a F5)
+    const savedPerms = localStorage.getItem('user_permissions');
+    if (savedPerms) {
+      this.userPermissions.set(JSON.parse(savedPerms));
+    }
   }
 
-  // ¿TIENE permiso? SIMPLE
+  // Guardar permisos en memoria y en localStorage
+  setPermissions(perms: string[]) {
+    this.userPermissions.set(perms);
+    localStorage.setItem('user_permissions', JSON.stringify(perms));
+  }
+
+  // Método para cuando el usuario cierra sesión
+  clearPermissions() {
+    this.userPermissions.set([]);
+    localStorage.removeItem('user_permissions');
+  }
+
   hasPermission(permiso: string): boolean {
     return this.userPermissions().includes(permiso);
   }
 
-  // Múltiples permisos (cualquiera)
   hasAnyPermission(perms: string[]): boolean {
     return perms.some(p => this.hasPermission(p));
   }

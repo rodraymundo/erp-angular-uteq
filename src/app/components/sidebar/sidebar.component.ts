@@ -1,4 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { PermissionsService } from '../../services/permissions.service'; // <-- NUEVO
@@ -13,24 +14,33 @@ import { PermissionsService } from '../../services/permissions.service'; // <-- 
 export class SidebarComponent implements OnInit {
   items: MenuItem[] = [];
   private permsSvc = inject(PermissionsService); // <-- Inyectamos el servicio
+  private router = inject(Router);
 
   ngOnInit() {
     this.items = [
       { label: 'Panel Principal', icon: 'pi pi-home', routerLink: '/home' },
 
-      // Solo insertamos este botón en el arreglo si el usuario tiene 'group:admin'
-      ...(this.permsSvc.hasPermission('group:view')
+      // Solo lo ve quien tiene group:manage
+      ...(this.permsSvc.hasPermission('group:manage')
         ? [{ label: 'Grupos', icon: 'pi pi-sitemap', routerLink: '/home/group' }]
         : []),
 
-      // Solo insertamos este botón si el usuario tiene permiso 's:view'
-      ...(this.permsSvc.hasPermission('users:view')
+      // Solo lo ve quien tiene user:manage
+      ...(this.permsSvc.hasPermission('user:manage')
         ? [{ label: 'Gestión Usuarios', icon: 'pi pi-users', routerLink: '/home/users' }]
         : []),
 
-      { label: 'Mi Perfil', icon: 'pi pi-user', routerLink: '/home/user' },
+      // Solo lo ve quien tiene user:view
+      ...(this.permsSvc.hasPermission('user:view')
+        ? [{ label: 'Mi Perfil', icon: 'pi pi-user', routerLink: '/home/user' }]
+        : []),
+
       { separator: true },
-      { label: 'Cerrar Sesión', icon: 'pi pi-sign-out', routerLink: '/login' }
+      { label: 'Cerrar Sesión', icon: 'pi pi-sign-out', command: () => this.cerrarSesion() }
     ];
+  }
+  cerrarSesion() {
+    this.permsSvc.clearPermissions(); // Borramos del navegador
+    this.router.navigate(['/login']); // Lo mandamos al login
   }
 }

@@ -3,13 +3,14 @@ import { Router } from '@angular/router';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { TableModule } from 'primeng/table'; // <-- NUEVO
-import { TagModule } from 'primeng/tag';     // <-- NUEVO
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CardModule, ButtonModule, ProgressBarModule, TableModule, TagModule],
+  imports: [CardModule, ButtonModule, ProgressBarModule, TableModule, TagModule, HasPermissionDirective],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
