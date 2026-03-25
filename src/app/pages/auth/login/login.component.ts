@@ -42,13 +42,13 @@ export class LoginComponent {
     }
 
     const credentials = this.loginForm.value;
-    const apiUrl = 'https://spatial-delcine-devemma-edfc3f92.koyeb.app/login';
+    const apiUrl = 'http://localhost:3000/login';
 
     // Hacemos la petición POST a la API del profesor
     this.http.post<any>(apiUrl, credentials).subscribe({
       next: (response) => {
         try {
-          // 1. Obtenemos el token de la respuesta (basado en lo que vimos en Postman)
+          // 1. Obtenemos el token de la respuesta
           const token = response.data[0].token;
 
           // 2. Decodificamos la parte central del JWT (el Payload)
