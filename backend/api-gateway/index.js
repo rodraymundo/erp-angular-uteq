@@ -1,52 +1,86 @@
-require('dotenv').config();
-const Fastify = require('fastify');
-const proxy = require('@fastify/http-proxy');
-const jwt = require('@fastify/jwt');
-const rateLimit = require('@fastify/rate-limit');
+import Fastify from 'fastify';
+import proxy from '@fastify/http-proxy';
+import jwt from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
+import dotenv from 'dotenv';
+import cors from '@fastify/cors';
 
+dotenv.config();
 const fastify = Fastify({ logger: true });
 
-// 1. Límite de peticiones (Requerimiento del profe: 100/min)
+// Habilitar CORS para que Angular (localhost:4200) pueda conectarse sin problemas
+fastify.register(cors, {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+});
+
+// 1. Límite de Peticiones (Requisito del profesor)
 fastify.register(rateLimit, {
-    max: 100,
+    max: 100, // 100 peticiones por minuto
     timeWindow: '1 minute',
     errorResponseBuilder: function (request, context) {
-        return { statusCode: 429, intOpCode: 'API429', data: null, message: 'Límite de peticiones excedido' };
+        return {
+            statusCode: 429,
+            intOpCode: 'API429',
+            data: null,
+            message: 'Demasiadas peticiones. Intenta más tarde.'
+        };
     }
 });
 
 // 2. Configurar JWT
 fastify.register(jwt, { secret: process.env.JWT_SECRET });
 
-// 3. Protección de Rutas y Logs
+// 3. Middleware Hook para proteger rutas
 fastify.addHook('onRequest', async (request, reply) => {
-    // Dejar pasar login y registro sin token
-    if (request.url.includes('/login') || request.url.includes('/register')) {
+    // Dejamos pasar las rutas públicas de autenticación sin pedir token
+    if (request.url.startsWith('/api/users/login') || request.url.startsWith('/api/users/register')) {
         return;
     }
 
     try {
-        await request.jwtVerify(); // Valida el token
-        const userPerms = request.user.permissions || [];
+        // Si la ruta no es pública, verificamos el token obligatoriamente
+        await request.jwtVerify();
 
-        // Validar permiso de editar/mover ticket
-        if (request.method === 'PATCH' && request.url.includes('/status') && !userPerms.includes('tickets:move')) {
-            return reply.status(403).send({ statusCode: 403, intOpCode: 'SEC403', data: null, message: 'No tienes permiso tickets:move' });
-        }
-
-        // Guardar Logs (Requisito de 20% puntos extra)
-        console.log(`[LOG] Ruta: ${request.url} | Método: ${request.method} | IP: ${request.ip}`);
+        // Log para puntos extra
+        console.log(`[API GATEWAY LOG] Usuario ID: ${request.user.userId} accedió a ${request.url}`);
     } catch (err) {
-        return reply.status(401).send({ statusCode: 401, intOpCode: 'SEC401', data: null, message: 'No autorizado / Token inválido' });
+        return reply.status(401).send({
+            statusCode: 401,
+            intOpCode: 'Auth401',
+            data: null,
+            message: 'Token inválido o expirado'
+        });
     }
 });
 
-// 4. Configurar el Proxy hacia los Microservicios
-fastify.register(proxy, { upstream: process.env.USER_SERVICE_URL, prefix: '/api/users' });
-fastify.register(proxy, { upstream: process.env.TICKET_SERVICE_URL, prefix: '/api/tickets' });
-fastify.register(proxy, { upstream: process.env.GROUP_SERVICE_URL, prefix: '/api/groups' });
+// =========================================================================
+// 4. PROXYS: Redirección a los Microservicios correspondientes
+// =========================================================================
 
-fastify.listen({ port: process.env.PORT }, (err, address) => {
+// A) Servicio de Usuarios (Puerto 3001)
+fastify.register(proxy, {
+    upstream: process.env.USER_SERVICE_URL || 'http://localhost:3001',
+    prefix: '/api/users',
+    rewritePrefix: '/users' // Al servicio de usuarios le llegará como /users/...
+});
+
+// B) Servicio de Tickets (Puerto 3002) - ¡AQUÍ ESTÁ EL QUE FALTABA!
+fastify.register(proxy, {
+    upstream: process.env.TICKET_SERVICE_URL || 'http://localhost:3002',
+    prefix: '/api/tickets',
+    rewritePrefix: '/' // Se elimina /api/tickets para que el servicio reciba la raíz /
+});
+
+// C) Servicio de Grupos (Puerto 3003) - Lo dejamos listo de una vez
+fastify.register(proxy, {
+    upstream: process.env.GROUP_SERVICE_URL || 'http://localhost:3003',
+    prefix: '/api/groups',
+    rewritePrefix: '/'
+});
+
+// Levantar el Gateway
+fastify.listen({ port: 3000 }, (err, address) => {
     if (err) throw err;
-    console.log(`API Gateway escuchando en ${address}`);
+    console.log(`🚀 API Gateway corriendo en ${address}`);
 });

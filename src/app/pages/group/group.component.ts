@@ -1,6 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -15,9 +18,9 @@ import { TagModule } from 'primeng/tag';
 import { TimelineModule } from 'primeng/timeline';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextareaModule } from 'primeng/inputtextarea';
-import { DragDropModule } from 'primeng/dragdrop'; // <-- IMPORTANTE PARA EL DRAG & DROP
+import { DragDropModule } from 'primeng/dragdrop';
+
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
-import { ActivatedRoute, Router } from '@angular/router';
 import { PermissionsService } from '../../services/permissions.service';
 
 @Component({
@@ -28,23 +31,32 @@ import { PermissionsService } from '../../services/permissions.service';
   templateUrl: './group.component.html',
   styleUrl: './group.component.css'
 })
-export class GroupComponent implements OnInit {
-  selectedGroupForBoard: any = null;
+export class GroupComponent implements OnInit, OnDestroy {
+  private http = inject(HttpClient);
+  public permsSvc = inject(PermissionsService);
+  private fb = inject(FormBuilder);
+  private messageService = inject(MessageService);
+  private confirmationService = inject(ConfirmationService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
+  // Variables de Grupos
   groups: any[] = [];
+  selectedGroupForBoard: any = null;
   groupDialog: boolean = false;
   groupForm!: FormGroup;
   isEdit: boolean = false;
-  currentGroupId: number | null = null;
-  loggedUser = 'Raymundo Rodríguez';
+  currentGroupId: string | null = null;
+  loggedUser = '';
 
+  // Variables de Tickets / Tablero
   viewOptions: any[] = [{ label: 'Kanban', value: 'kanban', icon: 'pi pi-th-large' }, { label: 'Lista', value: 'list', icon: 'pi pi-list' }];
   selectedView: string = 'kanban';
-
   tickets: any[] = [];
-  usuariosGrupo = ['Raymundo Rodríguez', 'Santiago Pérez', 'Ana Gómez'];
-  nuevoMiembroEmail: string = '';
+  usuariosGrupo: any[] = []; // Se llenará con la BD en un futuro
   prioridades = ['Baja', 'Media', 'Alta'];
   estados = ['Pendiente', 'En Progreso', 'Revisión', 'Finalizado'];
+  comentariosTicket: any[] = [];
 
   displayTicketModal = false;
   displayCreateModal = false;
@@ -52,81 +64,158 @@ export class GroupComponent implements OnInit {
   ticketForm!: FormGroup;
   isEditTicket: boolean = false;
 
-  // Variables nuevas para Comentarios, Filtros y Drag&Drop
   nuevoComentario: string = '';
   filtroActivo: string = 'todos';
   draggedTicket: any | null = null;
 
-  public permsSvc = inject(PermissionsService);
-
-
-  private fb = inject(FormBuilder);
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
-
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-
   ngOnInit() {
-    this.groups = [
-      { id: 1, nombre: 'IDGS14', nivel: 'Avanzado', autor: 'Profe Luis', integrantes: 25, descripcion: 'Grupo de desarrollo' },
-      { id: 2, nombre: 'ITIC91', nivel: 'Intermedio', autor: 'Profe Juan', integrantes: 20, descripcion: 'Redes' }
-    ];
+    const userInfo = localStorage.getItem('user_info');
+    if (userInfo) this.loggedUser = JSON.parse(userInfo).nombre_completo || 'Usuario';
 
-    this.groupForm = this.fb.group({
-      nombre: ['', Validators.required], nivel: ['', Validators.required], autor: [this.loggedUser, Validators.required],
-      integrantes: [0, [Validators.required, Validators.min(1)]], descripcion: ['']
-    });
+    this.groupForm = this.fb.group({ nombre: ['', Validators.required], descripcion: [''] });
+    this.ticketForm = this.fb.group({ titulo: ['', Validators.required], descripcion: ['', Validators.required], estado_id: ['Pendiente', Validators.required], asignado_id: [''], prioridad_id: ['Media', Validators.required] });
 
-    this.ticketForm = this.fb.group({
-      titulo: ['', Validators.required], descripcion: ['', Validators.required], estado: ['Pendiente', Validators.required],
-      asignadoA: [''], prioridad: ['', Validators.required], fechaLimite: ['', Validators.required]
-    });
+    this.cargarGrupos();
+    this.cargarUsuarios();
 
+    // 🔴 ESTO EVITA EL SANGRADO: Escucha la URL y limpia poderes al instante
     this.route.paramMap.subscribe(params => {
       const idStr = params.get('id');
-      if (idStr) {
-        // Si hay un ID en la URL, buscamos el grupo y abrimos su tablero automáticamente
-        const grupoEncontrado = this.groups.find(g => g.id === Number(idStr));
-        if (grupoEncontrado) {
-          this.abrirTablero(grupoEncontrado);
-        }
-      } else {
-        // Si no hay ID (entramos desde el sidebar), mostramos la tabla normal
+      if (!idStr) {
         this.selectedGroupForBoard = null;
+        this.restaurarPermisosGlobales();
+      } else if (this.groups.length > 0) {
+        this.verificarUrlParametros(idStr); // Pasamos el ID exacto y fresco
       }
     });
   }
 
-  // --- CRUD GRUPOS ---
-  openNewGroup() { this.isEdit = false; this.groupForm.reset(); this.groupForm.patchValue({ autor: this.loggedUser, integrantes: 0 }); this.groupDialog = true; }
-  editGroup(group: any) { this.isEdit = true; this.currentGroupId = group.id; this.groupForm.patchValue(group); this.groupDialog = true; }
-  deleteGroup(group: any) {
-    this.confirmationService.confirm({
-      message: '¿Eliminar grupo ' + group.nombre + '?', header: 'Confirmar', icon: 'pi pi-exclamation-triangle', acceptButtonStyleClass: 'p-button-danger',
-      accept: () => { this.groups = this.groups.filter(g => g.id !== group.id); this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Grupo eliminado' }); }
-    });
-  }
-  hideGroupDialog() { this.groupDialog = false; }
-  saveGroup() {
-    if (this.groupForm.invalid) return;
-    if (this.isEdit) {
-      const index = this.groups.findIndex(g => g.id === this.currentGroupId);
-      this.groups[index] = { ...this.groupForm.value, id: this.currentGroupId };
-    } else { this.groups.push({ ...this.groupForm.value, id: Math.floor(Math.random() * 1000) }); }
-    this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Grupo guardado' });
-    this.groupDialog = false;
+  // Función auxiliar de limpieza
+  restaurarPermisosGlobales() {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      const payload = JSON.parse(decodeURIComponent(escape(atob(token.split('.')[1]))));
+      this.permsSvc.setPermissions(payload.permissions || []);
+    }
   }
 
-  // --- TRANSICIÓN A TABLERO ---
+  // ==========================================
+  // GESTIÓN DE GRUPOS (CRUD)
+  // ==========================================
+  cargarGrupos() {
+    this.http.get<any>('http://localhost:3000/api/groups').subscribe({
+      next: (res) => {
+        this.groups = res.data || [];
+        const idStr = this.route.snapshot.paramMap.get('id');
+        if (idStr) this.verificarUrlParametros(idStr);
+      },
+      error: (err) => console.error('Error al cargar grupos:', err)
+    });
+  }
+
+  cargarUsuarios() {
+    this.http.get<any>('http://localhost:3000/api/users').subscribe({
+      next: (res) => this.usuariosGrupo = res.data || [],
+      error: (err) => console.error('No se pudieron cargar los usuarios (¿Falta permiso user:view?):', err)
+    });
+  }
+
+  verificarUrlParametros(idStr?: string) {
+    const id = idStr || this.route.snapshot.paramMap.get('id');
+    if (id) {
+      const grupoEncontrado = this.groups.find(g => g.id === id);
+      if (grupoEncontrado) this.abrirTablero(grupoEncontrado);
+      else this.messageService.add({ severity: 'warn', summary: 'Denegado', detail: 'No tienes acceso' });
+    }
+  }
+  openNewGroup() {
+    this.isEdit = false;
+    this.groupForm.reset();
+    this.groupDialog = true;
+  }
+
+  editGroup(group: any) {
+    this.isEdit = true;
+    this.currentGroupId = group.id;
+    this.groupForm.patchValue(group);
+    this.groupDialog = true;
+  }
+
+  saveGroup() {
+    if (this.groupForm.invalid) return;
+    const payload = this.groupForm.value;
+
+    if (this.isEdit) {
+      this.http.put<any>(`http://localhost:3000/api/groups/${this.currentGroupId}`, payload).subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Grupo actualizado' });
+          this.groupDialog = false;
+          this.cargarGrupos();
+        }
+      });
+    } else {
+      this.http.post<any>('http://localhost:3000/api/groups', payload).subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Grupo creado' });
+          this.groupDialog = false;
+          this.cargarGrupos();
+        }
+      });
+    }
+  }
+
+  deleteGroup(group: any) {
+    this.confirmationService.confirm({
+      message: `¿Eliminar permanentemente el grupo: ${group.nombre}?`,
+      header: 'Confirmar Eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.http.delete(`http://localhost:3000/api/groups/${group.id}`).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Grupo eliminado' });
+            this.cargarGrupos();
+          }
+        });
+      }
+    });
+  }
+
+  // ==========================================
+  // TABLERO Y PERMISOS POR GRUPO
+  // ==========================================
   abrirTablero(group: any) {
     this.selectedGroupForBoard = group;
-    this.tickets = [
-      { id: 'T-01', titulo: 'Diseñar BD', descripcion: 'Esquema inicial', estado: 'En Progreso', asignadoA: 'Raymundo Rodríguez', prioridad: 'Alta', fechaCreacion: new Date('2026-03-01'), fechaLimite: new Date('2026-03-10'), comentarios: ['Se ajustó la tabla de usuarios.'], historial: [{ status: 'Creado', date: '01/03/2026', user: 'Admin' }] },
-      { id: 'T-02', titulo: 'Login UI', descripcion: 'Pantalla Angular', estado: 'Pendiente', asignadoA: '', prioridad: 'Media', fechaCreacion: new Date('2026-03-05'), fechaLimite: new Date('2026-03-12'), comentarios: [], historial: [{ status: 'Creado', date: '05/03/2026', user: 'Admin' }] }
-    ];
+    this.restaurarPermisosGlobales();
+
+    this.http.get<any>(`http://localhost:3000/api/groups/${group.id}/my-permissions`).subscribe({
+      next: (res) => {
+        const dataBruta = res.data || [];
+
+        // 🔴 EL TRADUCTOR MÁGICO: Convierte objetos complejos a texto simple
+        const permisosLocales = dataBruta.map((p: any) => {
+          if (typeof p === 'string') return p;
+          if (p.permisos && p.permisos.nombre) return p.permisos.nombre;
+          if (p.nombre) return p.nombre;
+          return '';
+        }).filter((p: string) => p !== '');
+
+        const token = localStorage.getItem('auth_token');
+        let permisosGlobales = [];
+        if (token) {
+          permisosGlobales = JSON.parse(decodeURIComponent(escape(atob(token.split('.')[1])))).permissions || [];
+        }
+
+        this.permsSvc.setPermissions([...permisosGlobales, ...permisosLocales]);
+      }
+    });
+
+    this.cargarTicketsTablero(group.id);
   }
   cerrarTablero() {
+    this.selectedGroupForBoard = null;
+    this.restaurarPermisosGlobales(); // <- Usamos el limpiador
+
     if (this.permsSvc.hasPermission('group:manage')) {
       this.router.navigate(['/home/group']);
     } else {
@@ -134,100 +223,167 @@ export class GroupComponent implements OnInit {
     }
   }
 
-  // --- FILTROS RÁPIDOS ---
-  aplicarFiltro(filtro: string) {
-    this.filtroActivo = filtro;
+  // ==========================================
+  // GESTIÓN DE TICKETS Y DRAG & DROP
+  // ==========================================
+  cargarTicketsTablero(grupoId: string) {
+    this.http.get<any>(`http://localhost:3000/api/tickets?grupo_id=${grupoId}`).subscribe({
+      next: (res) => this.tickets = res.data || []
+    });
   }
 
-  getTicketsFiltrados() {
-    let filtrados = this.tickets;
-    if (this.filtroActivo === 'mis_tickets') { filtrados = filtrados.filter(t => t.asignadoA === this.loggedUser); }
-    if (this.filtroActivo === 'sin_asignar') { filtrados = filtrados.filter(t => !t.asignadoA || t.asignadoA === ''); }
-    if (this.filtroActivo === 'alta') { filtrados = filtrados.filter(t => t.prioridad === 'Alta'); }
-    return filtrados;
-  }
-
-  getTicketsByStatus(status: string) {
-    return this.getTicketsFiltrados().filter(t => t.estado === status);
-  }
-  getSeverity(prioridad: string) { switch (prioridad) { case 'Alta': return 'danger'; case 'Media': return 'warning'; case 'Baja': return 'info'; default: return 'success'; } }
-
-  // --- DRAG AND DROP ---
-  // --- DRAG AND DROP ---
+  // DRAG & DROP
   dragStart(ticket: any) {
-    // Solo permitimos mover si tiene edit:state o manage
     if (this.permsSvc.hasAnyPermission(['ticket:edit:state', 'ticket:manage'])) {
       this.draggedTicket = ticket;
     } else {
       this.draggedTicket = null;
-      this.messageService.add({ severity: 'warn', summary: 'Acceso Denegado', detail: 'No tienes permiso para cambiar el estado del ticket.' });
+      this.messageService.add({ severity: 'warn', summary: 'Acceso Denegado', detail: 'No tienes permiso para mover tickets aquí.' });
     }
   }
 
+  dragEnd() { this.draggedTicket = null; }
+
+  // FILTROS
+  aplicarFiltro(filtro: string) { this.filtroActivo = filtro; }
+  // Actualiza los filtros para leer las variables limpias
+  getTicketsFiltrados() {
+    let filtrados = this.tickets;
+    if (this.filtroActivo === 'mis_tickets') filtrados = filtrados.filter(t => t.nombreAsignado === this.loggedUser);
+    if (this.filtroActivo === 'alta') filtrados = filtrados.filter(t => t.nombrePrioridad === 'Alta');
+    return filtrados;
+  }
+
+  // Actualiza la lectura de columnas Kanban
+  getTicketsByStatus(status: string) {
+    return this.getTicketsFiltrados().filter(t => t.nombreEstado === status);
+  }
+
+  // Actualiza la validación del Drag & Drop
   drop(estadoDestino: string) {
-    if (this.draggedTicket && this.draggedTicket.estado !== estadoDestino) {
-      // Registrar en el historial el movimiento
-      this.draggedTicket.historial.push({ status: `Movido a ${estadoDestino}`, date: new Date().toLocaleDateString(), user: this.loggedUser });
-      this.draggedTicket.estado = estadoDestino;
-      this.messageService.add({ severity: 'info', summary: 'Actualizado', detail: `Ticket movido a ${estadoDestino}` });
+    // 1. Candado Estricto Front-end
+    if (!this.permsSvc.hasAnyPermission(['ticket:edit:state', 'ticket:manage'])) {
+      this.messageService.add({ severity: 'error', summary: 'Denegado', detail: 'No tienes permiso para mover tickets en este grupo.' });
+      this.draggedTicket = null;
+      this.cargarTicketsTablero(this.selectedGroupForBoard.id); // 🔴 ROMPER ILUSIÓN VISUAL
+      return;
+    }
+
+    if (this.draggedTicket && this.draggedTicket.nombreEstado !== estadoDestino) {
+      const ticketId = this.draggedTicket.id;
+
+      this.http.patch<any>(`http://localhost:3000/api/tickets/${ticketId}/state`, { estado_id: estadoDestino }).subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'info', summary: 'Actualizado', detail: `Ticket movido a ${estadoDestino}` });
+          this.cargarTicketsTablero(this.selectedGroupForBoard.id);
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Denegado', detail: 'Bloqueo de seguridad del servidor.' });
+          this.cargarTicketsTablero(this.selectedGroupForBoard.id); // 🔴 ROMPER ILUSIÓN VISUAL
+        }
+      });
     }
   }
-  dragEnd() {
-    this.draggedTicket = null;
-  }
+  getSeverity(prioridad: string) { switch (prioridad) { case 'Alta': return 'danger'; case 'Media': return 'warning'; case 'Baja': return 'info'; default: return 'success'; } }
 
-  // --- CRUD TICKETS Y COMENTARIOS ---
+  // CRUD TICKETS
   openTicketDetail(ticket: any) {
     if (this.permsSvc.hasPermission('ticket:view')) {
       this.selectedTicket = ticket;
       this.displayTicketModal = true;
-    } else {
-      this.messageService.add({ severity: 'warn', summary: 'Denegado', detail: 'No tienes permiso para ver los detalles.' });
+      this.cargarComentarios(ticket.id); // 🔴 Llamamos a los comentarios al abrir
     }
   }
-  openCreateTicket() { this.isEditTicket = false; this.ticketForm.reset({ estado: 'Pendiente' }); this.displayCreateModal = true; }
+
+  cargarComentarios(ticketId: string) {
+    this.http.get<any>(`http://localhost:3000/api/tickets/${ticketId}/comments`).subscribe({
+      next: (res) => this.comentariosTicket = res.data || [],
+      error: (err) => console.error('Error cargando comentarios', err)
+    });
+  }
 
   agregarComentario() {
-    if (this.nuevoComentario.trim()) {
-      this.selectedTicket.comentarios.push(this.nuevoComentario);
-      this.selectedTicket.historial.push({ status: 'Comentario agregado', date: new Date().toLocaleDateString(), user: this.loggedUser });
-      this.nuevoComentario = '';
-    }
+    if (!this.nuevoComentario.trim()) return;
+    this.http.post<any>(`http://localhost:3000/api/tickets/${this.selectedTicket.id}/comments`, { texto: this.nuevoComentario }).subscribe({
+      next: () => {
+        this.nuevoComentario = '';
+        this.cargarComentarios(this.selectedTicket.id); // Recargar el muro de comentarios
+        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Comentario agregado' });
+      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No tienes permiso para comentar' })
+    });
+  }
+
+  openCreateTicket() {
+    this.isEditTicket = false;
+    this.ticketForm.reset({ estado_id: 'Pendiente', prioridad_id: 'Media' });
+    this.displayCreateModal = true;
   }
 
   editTicket(ticket: any) {
     this.isEditTicket = true;
     this.selectedTicket = ticket;
-    let fechaFormat = '';
-    if (ticket.fechaLimite) { fechaFormat = new Date(ticket.fechaLimite).toISOString().split('T')[0]; }
-    this.ticketForm.patchValue({ titulo: ticket.titulo, descripcion: ticket.descripcion, estado: ticket.estado, asignadoA: ticket.asignadoA, prioridad: ticket.prioridad, fechaLimite: fechaFormat });
+    this.ticketForm.patchValue({
+      titulo: ticket.titulo, descripcion: ticket.descripcion, estado_id: ticket.estado_id || 'Pendiente', prioridad_id: ticket.prioridad_id || 'Media'
+    });
     this.displayTicketModal = false;
     this.displayCreateModal = true;
+  }
+
+  saveTicket() {
+    if (this.ticketForm.invalid) return;
+
+    const formValues = this.ticketForm.value;
+    const payload = {
+      ...formValues,
+      grupo_id: this.selectedGroupForBoard.id,
+      asignado_id: formValues.asignado_id ? formValues.asignado_id : null
+    };
+
+    if (this.isEditTicket) {
+      this.http.put<any>(`http://localhost:3000/api/tickets/${this.selectedTicket.id}`, payload).subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Ticket actualizado' });
+          this.displayCreateModal = false;
+          this.cargarTicketsTablero(this.selectedGroupForBoard.id);
+        }
+      });
+    } else {
+      this.http.post<any>('http://localhost:3000/api/tickets', payload).subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Ticket creado' });
+          this.displayCreateModal = false;
+          this.cargarTicketsTablero(this.selectedGroupForBoard.id);
+        }
+      });
+    }
   }
 
   deleteTicket(ticket: any) {
     this.displayTicketModal = false;
     this.confirmationService.confirm({
-      message: `¿Eliminar ticket ${ticket.id}?`, header: 'Confirmar Eliminación', icon: 'pi pi-exclamation-triangle', acceptButtonStyleClass: 'p-button-danger',
-      accept: () => { this.tickets = this.tickets.filter(t => t.id !== ticket.id); this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: 'Ticket eliminado' }); }
+      message: `¿Eliminar ticket ${ticket.titulo}?`, header: 'Confirmar Eliminación', icon: 'pi pi-exclamation-triangle', acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.http.delete(`http://localhost:3000/api/tickets/${ticket.id}`).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: 'Ticket eliminado' });
+            this.cargarTicketsTablero(this.selectedGroupForBoard.id);
+          }
+        });
+      }
     });
   }
 
-  saveTicket() {
-    if (this.ticketForm.invalid) return;
-    if (this.isEditTicket) {
-      const index = this.tickets.findIndex(t => t.id === this.selectedTicket.id);
-      this.tickets[index] = { ...this.tickets[index], ...this.ticketForm.value };
-      this.tickets[index].historial.push({ status: 'Editado', date: new Date().toLocaleDateString(), user: this.loggedUser });
-    } else {
-      this.tickets.push({ ...this.ticketForm.value, id: 'T-0' + (this.tickets.length + 1), fechaCreacion: new Date(), comentarios: [], historial: [{ status: 'Creado', date: new Date().toLocaleDateString(), user: this.loggedUser }] });
-    }
-    this.displayCreateModal = false;
-  }
+  agregarMiembro() { /* Backend pendiente para miembros */ }
+  eliminarMiembro(usuario: string) { /* Backend pendiente para miembros */ }
 
-  // --- MIEMBROS ---
-  agregarMiembro() {
-    if (this.nuevoMiembroEmail) { this.usuariosGrupo.push(this.nuevoMiembroEmail); this.nuevoMiembroEmail = ''; }
+  ngOnDestroy() {
+    // Al salir de este componente, limpiamos los permisos fusionados
+    // y restauramos solo los que venían en tu Gafete (Token) original
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      const payload = JSON.parse(decodeURIComponent(escape(atob(token.split('.')[1]))));
+      this.permsSvc.setPermissions(payload.permissions || []);
+    }
   }
-  eliminarMiembro(usuario: string) { this.usuariosGrupo = this.usuariosGrupo.filter(u => u !== usuario); }
 }

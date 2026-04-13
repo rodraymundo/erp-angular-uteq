@@ -22,12 +22,12 @@ export class SidebarComponent implements OnInit {
 
       // Solo lo ve quien tiene group:manage
       ...(this.permsSvc.hasPermission('group:manage')
-        ? [{ label: 'Grupos', icon: 'pi pi-sitemap', routerLink: '/home/group' }]
+        ? [{ label: 'Gestión de Grupos', icon: 'pi pi-sitemap', routerLink: '/home/group' }]
         : []),
 
       // Solo lo ve quien tiene user:manage
       ...(this.permsSvc.hasPermission('user:manage')
-        ? [{ label: 'Gestión Usuarios', icon: 'pi pi-users', routerLink: '/home/users' }]
+        ? [{ label: 'Gestión de Usuarios', icon: 'pi pi-users', routerLink: '/home/users' }]
         : []),
 
       // Solo lo ve quien tiene user:view
@@ -40,7 +40,7 @@ export class SidebarComponent implements OnInit {
     ];
   }
   cerrarSesion() {
-    this.permsSvc.clearPermissions(); // Borramos del navegador
+    localStorage.removeItem('auth_token');
     this.router.navigate(['/login']); // Lo mandamos al login
   }
 }

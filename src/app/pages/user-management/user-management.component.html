@@ -6,78 +6,161 @@
 <p-card>
     <p-toolbar styleClass="mb-4">
         <ng-template pTemplate="left">
-            <p-button *ifHasPermission="['user:add']" label="Nuevo Usuario" icon="pi pi-user-plus" severity="success"
+            <p-button *appHasPermission="'user:add'" label="Nuevo Usuario" icon="pi pi-user-plus" severity="success"
                 (onClick)="openNew()"></p-button>
         </ng-template>
     </p-toolbar>
 
-    <p-table [value]="users" [paginator]="true" [rows]="5" responsiveLayout="scroll">
+    <p-table [value]="users" [paginator]="true" [rows]="10" responsiveLayout="scroll" styleClass="p-datatable-striped">
         <ng-template pTemplate="header">
             <tr>
+                <th>Usuario</th>
                 <th>Nombre</th>
                 <th>Correo</th>
-                <th style="width: 40%">Permisos Activos</th>
                 <th style="width: 150px">Acciones</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-user>
             <tr>
-                <td style="font-weight: bold; color: var(--primary-color);">{{user.nombre}}</td>
+                <td style="font-weight: bold; color: var(--primary-color);">&#64;{{user.username}}</td>
+                <td>{{user.nombre_completo}}</td>
                 <td>{{user.email}}</td>
                 <td>
-                    <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
-                        @for (permiso of user.permisos; track permiso) {
-                        <p-tag [value]="permiso" severity="info"></p-tag>
-                        }
-                        @if (!user.permisos || user.permisos.length === 0) {
-                        <span style="color: #999; font-style: italic;">Sin permisos especiales</span>
-                        }
+                    <div style="display: flex; gap: 0.5rem;">
+                        <p-button *appHasPermission="'user:edit'" icon="pi pi-pencil" severity="info" [rounded]="true"
+                            [outlined]="true" (onClick)="editUser(user)"></p-button>
+                        <p-button *appHasPermission="'user:delete'" icon="pi pi-trash" severity="danger"
+                            [rounded]="true" [outlined]="true" (onClick)="deleteUser(user)"></p-button>
                     </div>
                 </td>
-                <td>
-                    <p-button *ifHasPermission="['user:edit']" icon="pi pi-pencil" severity="info" [rounded]="true"
-                        [outlined]="true" [style]="{'margin-right': '0.5rem'}" (onClick)="editUser(user)">
-                    </p-button>
-                    <p-button *ifHasPermission="['user:delete']" icon="pi pi-trash" severity="danger" [rounded]="true"
-                        [outlined]="true" (onClick)="deleteUser(user)">
-                    </p-button>
-                </td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="5" class="text-center" style="padding: 2rem;">No hay usuarios registrados.</td>
             </tr>
         </ng-template>
     </p-table>
 </p-card>
 
-<p-dialog [(visible)]="userDialog" [style]="{width: '600px'}" header="Detalles del Usuario" [modal]="true"
-    styleClass="p-fluid">
+<p-dialog [(visible)]="userDialog" [style]="{width: '800px'}"
+    [header]="isEdit ? 'Editar Usuario y Permisos' : 'Crear Nuevo Usuario'" [modal]="true" styleClass="p-fluid">
     <ng-template pTemplate="content">
         <form [formGroup]="userForm" style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1rem;">
 
             <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;"><label>Nombre Completo</label><input type="text" pInputText
+                        formControlName="nombre_completo" /></div>
+                <div style="flex: 1;"><label>Usuario (Username)</label><input type="text" pInputText
+                        formControlName="username" /></div>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;"><label>Correo Electrónico</label><input type="email" pInputText
+                        formControlName="email" /></div>
+                <div style="flex: 1;"><label>Contraseña</label><input type="text" pInputText formControlName="password"
+                        [placeholder]="isEdit ? 'Dejar en blanco para no cambiar' : 'Requerida'" /></div>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
                 <div style="flex: 1;">
-                    <label>Nombre Completo</label>
-                    <input type="text" pInputText formControlName="nombre" />
+                    <label style="display: block; margin-bottom: 0.5rem;">Teléfono</label>
+                    <input type="text" pInputText formControlName="telefono" />
                 </div>
+
                 <div style="flex: 1;">
-                    <label>Correo Electrónico</label>
-                    <input type="email" pInputText formControlName="email" />
+                    <label style="display: block; margin-bottom: 0.5rem;">Dirección</label>
+                    <input type="text" pInputText formControlName="direccion" />
+                </div>
+
+                <div style="flex: 1;"> <!-- 👈 AGREGA ESTO -->
+                    <label style="font-weight: 600; color: #475569; display: block; margin-bottom: 0.5rem;">
+                        Asignar a Grupos
+                    </label>
+                    <p-multiSelect [options]="gruposTotales" formControlName="grupos_asignados" optionLabel="nombre"
+                        optionValue="id" placeholder="Selecciona los grupos..." display="chip"
+                        [style]="{'width': '100%'}" appendTo="body">
+                    </p-multiSelect>
                 </div>
             </div>
 
-            <div>
-                <label>Asignar Permisos del Sistema</label>
-                <p-multiSelect [options]="availablePermissions" formControlName="permisos" optionLabel="label"
-                    optionValue="value" placeholder="Seleccionar permisos..." display="chip" [filter]="true"
-                    filterPlaceHolder="Buscar permiso..." [style]="{'width':'100%', 'margin-top':'0.5rem'}">
-                </p-multiSelect>
+            <div style="background-color: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h3 style="margin-top: 0; color: #334155;">Gestión de Privilegios</h3>
+
+                <div>
+                    <label style="font-weight: 600; color: var(--primary-color);">1. ¿Dónde quieres aplicar o modificar
+                        permisos?</label>
+                    <p-dropdown [options]="gruposTotales" formControlName="grupo_id" optionLabel="nombre"
+                        optionValue="id" placeholder="Configuración Global (Todo el Sistema)" [showClear]="true"
+                        [style]="{'width':'100%', 'margin-top':'0.5rem', 'margin-bottom': '1.5rem'}">
+                    </p-dropdown>
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <label style="font-weight: 600;">2. Selecciona los poderes permitidos para este ámbito</label>
+                    <p-listbox [options]="currentPermsList" formControlName="permisos_nombres" [group]="true"
+                        optionGroupLabel="label" optionGroupChildren="items" optionLabel="label" optionValue="value"
+                        [multiple]="true" [checkbox]="true" [filter]="true"
+                        filterPlaceHolder="Buscar poder o privilegio..." [listStyle]="{'max-height': '280px'}"
+                        [style]="{'width':'100%', 'margin-top':'0.5rem'}">
+
+                        <ng-template let-group pTemplate="group">
+                            <div
+                                style="display: flex; align-items: center; gap: 0.5rem; color: #1e293b; padding: 0.2rem 0; background-color: #f8fafc;">
+                                <i class="pi pi-folder-open" style="color: var(--primary-color);"></i>
+                                <span style="font-weight: bold; font-size: 1rem;">{{group.label}}</span>
+                            </div>
+                        </ng-template>
+
+                    </p-listbox>
+                </div>
             </div>
+
+            @if (isEdit && resumenPermisos) {
+            <div style="margin-top: 1rem; border-top: 2px dashed #cbd5e1; padding-top: 1.5rem;">
+                <h3 style="margin-top: 0; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="pi pi-shield"></i> Resumen Actual de Poderes
+                </h3>
+
+                <p-accordion [multiple]="true">
+                    <p-accordionTab header="Permisos Globales (Activos en todo el ERP)" [selected]="true">
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            @for (permiso of resumenPermisos.globales; track permiso) {
+                            <p-tag [value]="permiso" severity="success"></p-tag>
+                            }
+                            @if (resumenPermisos.globales.length === 0) {
+                            <span style="color: #64748b; font-style: italic;">Sin poderes globales asignados.</span>
+                            }
+                        </div>
+                    </p-accordionTab>
+
+                    <p-accordionTab header="Permisos Locales (Por Grupo de Trabajo)" [selected]="true">
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            @for (grupo of resumenPermisos.por_grupo; track grupo.id) {
+                            <div style="background: #f1f5f9; padding: 1rem; border-radius: 6px;">
+                                <h4 style="margin: 0 0 0.5rem 0; color: #3b82f6;">{{grupo.nombre}}</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                    @for (permiso of grupo.permisos; track permiso) {
+                                    <p-tag [value]="permiso" severity="info"></p-tag>
+                                    }
+                                </div>
+                            </div>
+                            }
+                            @if (resumenPermisos.por_grupo.length === 0) {
+                            <span style="color: #64748b; font-style: italic;">No pertenece a ningún grupo con permisos
+                                especiales.</span>
+                            }
+                        </div>
+                    </p-accordionTab>
+                </p-accordion>
+            </div>
+            }
 
         </form>
     </ng-template>
 
     <ng-template pTemplate="footer">
-        <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
+        <p-button label="Cerrar" icon="pi pi-times" [text]="true" severity="secondary"
             (onClick)="hideDialog()"></p-button>
-        <p-button label="Guardar" icon="pi pi-check" [text]="true" (onClick)="saveUser()"
+        <p-button label="Guardar Configuración" icon="pi pi-check" [text]="true" (onClick)="saveUser()"
             [disabled]="userForm.invalid"></p-button>
     </ng-template>
 </p-dialog>

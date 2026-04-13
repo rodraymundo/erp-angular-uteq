@@ -1,68 +1,79 @@
-<h1 style="color: #333; margin-top: 0; margin-bottom: 2rem;">Dashboard Principal</h1>
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
 
-<div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
-    <p-card header="Pendientes" [style]="{ width: '200px', 'border-left': '5px solid #64748b' }">
-        <h2 style="margin: 0; font-size: 2rem;">{{stats.pendientes}}</h2>
-    </p-card>
-    <p-card header="En Progreso" [style]="{ width: '200px', 'border-left': '5px solid #3b82f6' }">
-        <h2 style="margin: 0; font-size: 2rem;">{{stats.enProgreso}}</h2>
-    </p-card>
-    <p-card header="Revisión" [style]="{ width: '200px', 'border-left': '5px solid #f59e0b' }">
-        <h2 style="margin: 0; font-size: 2rem;">{{stats.revision}}</h2>
-    </p-card>
-    <p-card header="Finalizados" [style]="{ width: '200px', 'border-left': '5px solid #22c55e' }">
-        <h2 style="margin: 0; font-size: 2rem;">{{stats.finalizados}}</h2>
-    </p-card>
-</div>
+<div style="padding: 1rem;">
+    <h2 style="color: #333; margin-top: 0;">Dashboard Principal</h2>
 
-<div *ifHasPermission="['group:view']">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h2 style="color: #555; margin: 0;">Mis Grupos</h2>
-    </div>
+    <div *appHasPermission="'group:view'" style="margin-bottom: 2.5rem;">
+        <h3 style="margin-bottom: 1rem; color: #555;">Mis Áreas de Trabajo (Grupos)</h3>
 
-    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
-        @for(grupo of misGrupos; track grupo.id) {
-        <p-card [header]="grupo.nombre" [style]="{ width: '350px' }">
-            <p style="color: #666;">Total de Tickets: <b>{{grupo.tickets}}</b></p>
-            <div style="margin-bottom: 1rem;">
-                <span style="font-size: 0.85rem; color: #888;">Avance del grupo</span>
-                <p-progressBar [value]="grupo.avance" [showValue]="true"></p-progressBar>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <p-card *ngFor="let grupo of grupos"
+                [style]="{width: '280px', borderTop: '4px solid var(--primary-color)'}">
+                <div style="display: flex; flex-direction: column; height: 100%;">
+                    <h3 style="margin: 0 0 0.5rem 0; color: #333;">{{ grupo.nombre }}</h3>
+                    <p style="color: #666; font-size: 0.9rem; flex-grow: 1; margin-bottom: 1.5rem;">
+                        {{ grupo.descripcion || 'Sin descripción' }}
+                    </p>
+                    <p-button label="Entrar al Tablero" icon="pi pi-external-link" [outlined]="true" styleClass="w-full"
+                        (onClick)="irAlTablero(grupo.id)"></p-button>
+                </div>
+            </p-card>
+
+            <div *ngIf="grupos.length === 0" style="color: #888; font-style: italic;">
+                No perteneces a ningún grupo activo.
             </div>
-            <p-button label="Abrir Tablero" icon="pi pi-external-link" [style]="{'width':'100%'}"
-                (onClick)="irAlGrupo(grupo.id)"></p-button>
-        </p-card>
-        }
+        </div>
     </div>
-</div>
 
-<div>
-    <h2 style="color: #555; margin-bottom: 1rem;">Mis Tareas Asignadas</h2>
+    <div style="display: flex; gap: 1rem; margin-bottom: 2rem;" *appHasPermission="'ticket:view'">
+        <p-card header="Total Tickets" [style]="{width: '250px', background: '#f8fafc'}">
+            <h2 style="margin: 0; color: #2563eb; font-size: 2.5rem;">{{ stats.total }}</h2>
+        </p-card>
+        <p-card header="Pendientes" [style]="{width: '250px', background: '#fffbeb'}">
+            <h2 style="margin: 0; color: #d97706; font-size: 2.5rem;">{{ stats.pending }}</h2>
+        </p-card>
+        <p-card header="Completados" [style]="{width: '250px', background: '#f0fdf4'}">
+            <h2 style="margin: 0; color: #16a34a; font-size: 2.5rem;">{{ stats.completed }}</h2>
+        </p-card>
+    </div>
+
     <p-card>
-        <p-table [value]="misTicketsAsignados" [rows]="5" responsiveLayout="scroll">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>ID</th>
-                    <th>Título</th>
-                    <th>Estado</th>
-                    <th>Prioridad</th>
-                    <th>Grupo</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-t>
-                <tr>
-                    <td style="font-weight: bold; color: #3b82f6;">{{t.id}}</td>
-                    <td>{{t.titulo}}</td>
-                    <td>{{t.estado}}</td>
-                    <td><p-tag [value]="t.prioridad"></p-tag></td>
-                    <td><p-tag severity="secondary" [value]="t.grupo"></p-tag></td>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-                <tr>
-                    <td colspan="5" style="text-align: center; color: #888; padding: 2rem;">No tienes tickets asignados.
-                    </td>
-                </tr>
-            </ng-template>
-        </p-table>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        </div>
+
+        <div style="flex: 1;">
+            <h3 style="margin-top: 0; color: #334155; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="pi pi-list" style="color: var(--primary-color);"></i> Mis Tickets Asignados
+            </h3>
+            <p-table [value]="misTicketsAsignados" [paginator]="true" [rows]="5" responsiveLayout="scroll"
+                styleClass="p-datatable-striped">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Estado</th>
+                        <th>Prioridad</th>
+                        <th>Grupo (UUID)</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-ticket>
+                    <tr>
+                        <td style="color: gray; font-size: 0.9em;">{{ticket.id | slice:0:8}}</td>
+                        <td style="font-weight: 500;">{{ticket.titulo}}</td>
+                        <td><span style="font-weight: 500;">{{ticket.nombreEstado}}</span></td>
+                        <td><p-tag [value]="ticket.nombrePrioridad"></p-tag></td>
+                        <td><p-tag severity="secondary" value="{{ ticket.grupo_id | slice:0:8 }}"></p-tag></td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="5" class="text-center" style="padding: 2rem; color: #64748b; font-style: italic;">
+                            ¡Todo al día! No tienes tickets asignados a tu nombre por el momento.
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
     </p-card>
 </div>

@@ -1,134 +1,165 @@
 <p-toast></p-toast>
 <p-confirmDialog></p-confirmDialog>
-<h1 style="color: #333; margin-top: 0; margin-bottom: 2rem;">Mi Perfil</h1>
 
-<div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+<div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+    <div
+        style="background-color: var(--primary-color); color: white; padding: 0.8rem; border-radius: 12px; display: flex;">
+        <i class="pi pi-user" style="font-size: 1.5rem;"></i>
+    </div>
+    <h1 style="color: #1e293b; margin: 0; font-size: 1.8rem;">Mi Perfil</h1>
+</div>
 
-    <p-card header="Datos de la Cuenta" [style]="{ width: '450px' }">
-        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+<div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start;">
 
-            <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
-                <span
-                    style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Usuario</span>
-                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">&#64;{{ userData.usuario }}</p>
+    <p-card styleClass="shadow-2" [style]="{ width: '400px', 'border-radius': '12px' }">
+
+        <div
+            style="display: flex; flex-direction: column; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1.5rem;">
+            <div
+                style="width: 80px; height: 80px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: bold; margin-bottom: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                {{ userData.nombre ? (userData.nombre.charAt(0) | uppercase) : 'U' }}
+            </div>
+            <h2 style="margin: 0; color: #0f172a; font-size: 1.4rem; text-align: center;">{{ userData.nombre }}</h2>
+            <p style="margin: 0.25rem 0 0 0; color: #64748b; font-weight: 500;">&#64;{{ userData.usuario }}</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1.2rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="pi pi-envelope" style="color: #94a3b8; font-size: 1.2rem;"></i>
+                <div>
+                    <span
+                        style="display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Correo
+                        Electrónico</span>
+                    <span style="color: #334155; font-weight: 500;">{{ userData.email }}</span>
+                </div>
             </div>
 
-            <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
-                <span style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Nombre
-                    Completo</span>
-                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.nombre }}</p>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="pi pi-phone" style="color: #94a3b8; font-size: 1.2rem;"></i>
+                <div>
+                    <span
+                        style="display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Teléfono</span>
+                    <span style="color: #334155; font-weight: 500;">{{ userData.telefono || 'No registrado' }}</span>
+                </div>
             </div>
 
-            <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
-                <span style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Correo
-                    Electrónico</span>
-                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.email }}</p>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="pi pi-map-marker" style="color: #94a3b8; font-size: 1.2rem;"></i>
+                <div>
+                    <span
+                        style="display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Dirección</span>
+                    <span style="color: #334155; font-weight: 500;">{{ userData.direccion || 'No registrada' }}</span>
+                </div>
             </div>
 
-            <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
-                <span
-                    style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Teléfono</span>
-                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.telefono }}</p>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <i class="pi pi-calendar" style="color: #94a3b8; font-size: 1.2rem;"></i>
+                <div>
+                    <span
+                        style="display: block; color: #64748b; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Fecha
+                        de Nacimiento</span>
+                    <span style="color: #334155; font-weight: 500;">{{ userData.fechaNacimiento || 'No registrada'
+                        }}</span>
+                </div>
             </div>
+        </div>
 
-            <div style="border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
-                <span
-                    style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Dirección</span>
-                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.direccion }}</p>
-            </div>
-
-            <div>
-                <span style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase;">Fecha de
-                    Nacimiento</span>
-                <p style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #333;">{{ userData.fechaNacimiento }}</p>
-            </div>
-
-            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                <p-button *ifHasPermission="['user:edit:profile']" label="Editar" icon="pi pi-pencil"
-                    [style]="{'flex': '1'}" (onClick)="editProfile()"></p-button>
-                <p-button *ifHasPermission="['user:delete']" label="Eliminar" icon="pi pi-trash" severity="danger"
-                    [outlined]="true" [style]="{'flex': '1'}" (onClick)="confirmDelete()"></p-button>
-            </div>
-
+        <div style="margin-top: 2rem;">
+            <p-button *appHasPermission="'user:edit:profile'" label="Editar Mi Información" icon="pi pi-user-edit"
+                styleClass="p-button-outlined p-button-secondary w-full" [style]="{'width': '100%'}"
+                (onClick)="editProfile()"></p-button>
         </div>
     </p-card>
 
-</div>
+    <div style="flex: 1; min-width: 400px;">
+        <p-card styleClass="shadow-2" [style]="{ 'border-radius': '12px' }">
+            <ng-template pTemplate="title">
+                <div style="display: flex; align-items: center; gap: 0.5rem; color: #1e293b; font-size: 1.2rem;">
+                    <i class="pi pi-ticket" style="color: var(--primary-color);"></i> Mis Tickets Asignados
+                </div>
+            </ng-template>
 
-<div style="display: flex; flex-direction: column; gap: 1.5rem; flex: 1; min-width: 400px;">
-
-    <div style="display: flex; gap: 1rem;">
-        <p-card [style]="{ flex: 1, 'text-align': 'center', 'border-top': '4px solid #64748b' }">
-            <h2 style="margin: 0; font-size: 2rem;">{{statsTickets.abiertos}}</h2>
-            <p style="margin: 0; color: #666;">Abiertos</p>
-        </p-card>
-        <p-card [style]="{ flex: 1, 'text-align': 'center', 'border-top': '4px solid #3b82f6' }">
-            <h2 style="margin: 0; font-size: 2rem;">{{statsTickets.progreso}}</h2>
-            <p style="margin: 0; color: #666;">En Progreso</p>
-        </p-card>
-        <p-card [style]="{ flex: 1, 'text-align': 'center', 'border-top': '4px solid #22c55e' }">
-            <h2 style="margin: 0; font-size: 2rem;">{{statsTickets.hechos}}</h2>
-            <p style="margin: 0; color: #666;">Hechos</p>
+            <p-table [value]="misTicketsAsignados" [rows]="5" [paginator]="true"
+                styleClass="p-datatable-striped p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Estado</th>
+                        <th>Grupo (UUID)</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-t>
+                    <tr>
+                        <td style="font-weight: 600; color: #64748b; font-size: 0.9rem;">#{{t.id | slice:0:8}}</td>
+                        <td style="font-weight: 500; color: #334155;">{{t.titulo}}</td>
+                        <td>
+                            <p-tag [value]="t.nombreEstado || t.estado_id"
+                                [severity]="(t.nombreEstado || t.estado_id) === 'Finalizado' ? 'success' : 'info'"></p-tag>
+                        </td>
+                        <td>
+                            <p-tag severity="secondary" value="{{ (t.grupo_id | slice:0:8) || 'N/A' }}"></p-tag>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="4" class="text-center" style="padding: 2.5rem 1rem;">
+                            <i class="pi pi-check-circle"
+                                style="font-size: 2.5rem; color: #22c55e; margin-bottom: 1rem; display: block;"></i>
+                            <span style="color: #64748b; font-size: 1.1rem; font-weight: 500;">¡Todo al día! No tienes
+                                tickets asignados.</span>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
         </p-card>
     </div>
 
-    <p-card header="Mis Tickets Asignados">
-        <p-table [value]="misTicketsAsignados" [rows]="5">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>ID</th>
-                    <th>Título</th>
-                    <th>Estado</th>
-                    <th>Grupo</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-t>
-                <tr>
-                    <td style="font-weight: bold; color: #3b82f6;">{{t.id}}</td>
-                    <td>{{t.titulo}}</td>
-                    <td>{{t.estado}}</td>
-                    <td><p-tag severity="secondary" [value]="t.grupo"></p-tag></td>
-                </tr>
-            </ng-template>
-        </p-table>
-    </p-card>
-
 </div>
 
-<p-dialog [(visible)]="profileDialog" [style]="{width: '500px'}" header="Editar Mi Perfil" [modal]="true"
-    styleClass="p-fluid">
+<p-dialog [(visible)]="profileDialog" [style]="{width: '600px'}" [modal]="true" styleClass="p-fluid shadow-6"
+    [draggable]="false" [resizable]="false">
+    <ng-template pTemplate="header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <i class="pi pi-user-edit" style="font-size: 1.2rem; color: var(--primary-color);"></i>
+            <span style="font-weight: bold; font-size: 1.25rem;">Editar Mi Perfil</span>
+        </div>
+    </ng-template>
+
     <ng-template pTemplate="content">
-        <form [formGroup]="profileForm" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+        <form [formGroup]="profileForm"
+            style="display: flex; flex-direction: column; gap: 1.5rem; padding-top: 0.5rem;">
 
-            <div style="display: flex; gap: 1rem;">
-                <div style="flex: 1;">
-                    <label>Usuario</label>
-                    <input type="text" pInputText formControlName="usuario" />
+            <div style="display: flex; gap: 1.5rem;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="font-weight: 600; color: #475569;">Usuario</label>
+                    <input type="text" pInputText formControlName="usuario" placeholder="Ej: jdoe" />
                 </div>
-                <div style="flex: 1;">
-                    <label>Nombre Completo</label>
-                    <input type="text" pInputText formControlName="nombre" />
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="font-weight: 600; color: #475569;">Nombre Completo</label>
+                    <input type="text" pInputText formControlName="nombre" placeholder="Ej: John Doe" />
                 </div>
             </div>
 
-            <div style="display: flex; gap: 1rem;">
-                <div style="flex: 1;">
-                    <label>Correo Electrónico</label>
-                    <input type="email" pInputText formControlName="email" />
+            <div style="display: flex; gap: 1.5rem;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="font-weight: 600; color: #475569;">Correo Electrónico</label>
+                    <input type="email" pInputText formControlName="email" placeholder="correo@ejemplo.com" />
                 </div>
-                <div style="flex: 1;">
-                    <label>Teléfono</label>
-                    <input type="text" pInputText formControlName="telefono" />
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="font-weight: 600; color: #475569;">Teléfono</label>
+                    <input type="text" pInputText formControlName="telefono" placeholder="Ej: 555-1234" />
                 </div>
             </div>
 
-            <div style="display: flex; gap: 1rem;">
-                <div style="flex: 1;">
-                    <label>Dirección</label>
-                    <input type="text" pInputText formControlName="direccion" />
+            <div style="display: flex; gap: 1.5rem;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="font-weight: 600; color: #475569;">Dirección</label>
+                    <input type="text" pInputText formControlName="direccion" placeholder="Tu domicilio" />
                 </div>
-                <div style="flex: 1;">
-                    <label>Fecha de Nacimiento</label>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="font-weight: 600; color: #475569;">Fecha de Nacimiento</label>
                     <input type="date" pInputText formControlName="fechaNacimiento" />
                 </div>
             </div>
@@ -137,9 +168,12 @@
     </ng-template>
 
     <ng-template pTemplate="footer">
-        <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
-            (onClick)="hideDialog()"></p-button>
-        <p-button label="Guardar Cambios" icon="pi pi-check" [text]="true" (onClick)="saveProfile()"
-            [disabled]="profileForm.invalid"></p-button>
+        <div
+            style="border-top: 1px solid #e2e8f0; padding-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem;">
+            <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
+                (onClick)="hideDialog()"></p-button>
+            <p-button label="Guardar Cambios" icon="pi pi-check" (onClick)="saveProfile()"
+                [disabled]="profileForm.invalid"></p-button>
+        </div>
     </ng-template>
 </p-dialog>

@@ -1,25 +1,54 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const jwt = require('jsonwebtoken');
-const { createClient } = require('@supabase/supabase-js');
+import express from 'express';
+import cors from 'cors';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
+dotenv.config(); // Cargar .env desde la raíz
 const app = express();
 app.use(cors());
-app.use(express.json()); // Para poder leer JSON
+app.use(express.json());
 
-// Conexión a Supabase
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 // ==========================================
-// API 1: LOGIN (/login)
+// 1. MIDDLEWARE Y SEGURIDAD
 // ==========================================
-app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+
+const authenticate = (req, res, next) => {
+    // Excluimos las rutas públicas (Login y Registro no piden token)
+    if (req.path === '/users/login' || req.path === '/users/register') {
+        return next();
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ statusCode: 401, intOpCode: 'USR401', message: 'Token ausente o inválido', data: [] });
+    }
 
     try {
-        // 1. Buscar al usuario por email y contraseña
-        // Nota: En un entorno real usarías bcrypt, aquí comparamos texto plano según los dummies
+        const token = authHeader.split(' ')[1];
+        req.user = jwt.verify(token, process.env.JWT_SECRET);
+        next();
+    } catch (error) {
+        return res.status(401).json({ statusCode: 401, intOpCode: 'USR401', message: 'Token expirado', data: [] });
+    }
+};
+
+const hasGlobalPermission = (user, perm) => {
+    const perms = user.permissions || [];
+    return perms.includes(perm) || perms.includes('user:manage'); // user:manage es Dios aquí
+};
+
+app.use(authenticate);
+
+// ==========================================
+// 2. ENDPOINTS PÚBLICOS (AUTH)
+// ==========================================
+
+app.post('/users/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
         const { data: user, error: userError } = await supabase
             .from('usuarios')
             .select('*')
@@ -28,126 +57,211 @@ app.post('/login', async (req, res) => {
             .single();
 
         if (userError || !user) {
-            return res.status(401).json({ statusCode: 401, intOpCode: 1, message: 'Credenciales inválidas' });
+            return res.status(401).json({ statusCode: 401, intOpCode: 'USR401', message: 'Credenciales inválidas', data: [] });
         }
 
-        // 2. Actualizar el last_login
         await supabase.from('usuarios').update({ last_login: new Date() }).eq('id', user.id);
 
-        // 3. Obtener los nombres en texto de los permisos basados en los UUIDs del usuario
-        let permissionNames = [];
+        let permisosNombres = [];
         if (user.permisos_globales && user.permisos_globales.length > 0) {
-            const { data: perms } = await supabase
-                .from('permisos')
-                .select('nombre')
-                .in('id', user.permisos_globales);
-            permissionNames = perms.map(p => p.nombre);
+            const { data: permisosData } = await supabase.from('permisos').select('nombre').in('id', user.permisos_globales);
+            permisosNombres = permisosData.map(p => p.nombre);
         }
 
-        // 4. Firmar el Token JWT exacto como el de Koyeb
-        const token = jwt.sign(
-            {
-                email: user.email,
-                sub: user.email,
-                permissions: permissionNames
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '8h' }
-        );
+        const token = jwt.sign({
+            userId: user.id, username: user.username, email: user.email, permissions: permisosNombres
+        }, process.env.JWT_SECRET, { expiresIn: '8h' });
 
-        // 5. Devolver el JSON SCHEMA requerido
         res.status(200).json({
-            statusCode: 200,
-            intOpCode: 0,
-            data: [{
-                token: token,
-                message: "Login exitoso"
-            }]
+            statusCode: 200, intOpCode: 'USR200', message: "Login exitoso",
+            data: [{ token: token, user: { id: user.id, username: user.username, email: user.email, permissions: permisosNombres } }]
         });
-
     } catch (error) {
-        res.status(500).json({ statusCode: 500, intOpCode: -1, message: error.message });
+        res.status(500).json({ statusCode: 500, intOpCode: 'USR500', message: error.message, data: [] });
     }
 });
 
-// ==========================================
-// API 2: REGISTER (/register)
-// ==========================================
-// Registro público: Crea un usuario sin permisos especiales por defecto
-app.post('/register', async (req, res) => {
-    const { nombre_completo, username, email, password, telefono, direccion } = req.body;
-
-    try {
-        const { data, error } = await supabase
-            .from('usuarios')
-            .insert([{
-                nombre_completo,
-                username,
-                email,
-                password,
-                telefono,
-                direccion,
-                permisos_globales: [] // Arreglo vacío por defecto
-            }])
-            .select();
-
-        if (error) throw error;
-
-        res.status(201).json({
-            statusCode: 201,
-            intOpCode: 0,
-            message: "Usuario registrado correctamente",
-            data: data
-        });
-    } catch (error) {
-        res.status(400).json({ statusCode: 400, intOpCode: 1, message: error.message });
-    }
-});
-
-// ==========================================
-// API 3: AGREGAR USER (/users)
-// ==========================================
-// Uso Admin: Similar al registro, pero aquí se le pueden pasar permisos directos
-app.post('/users', async (req, res) => {
-    // Para simplificar, recibimos un arreglo con los nombres de los permisos ["user:view", "ticket:add"]
-    const { nombre_completo, username, email, password, permisos_nombres } = req.body;
-
+app.post('/users/register', async (req, res) => {
+    const { nombre_completo, username, email, password, direccion, telefono, permisos_nombres } = req.body;
     try {
         let permisosIds = [];
-
-        // Si nos envían nombres de permisos, buscamos sus UUIDs reales en la BD
         if (permisos_nombres && permisos_nombres.length > 0) {
-            const { data: perms } = await supabase
-                .from('permisos')
-                .select('id')
-                .in('nombre', permisos_nombres);
+            const { data: perms } = await supabase.from('permisos').select('id').in('nombre', permisos_nombres);
             permisosIds = perms.map(p => p.id);
         }
 
-        // Insertamos al usuario con esos permisos
-        const { data, error } = await supabase
-            .from('usuarios')
-            .insert([{
-                nombre_completo, username, email, password,
-                permisos_globales: permisosIds
-            }])
-            .select();
+        const { data, error } = await supabase.from('usuarios').insert([{
+            nombre_completo, username, email, password, direccion, telefono, permisos_globales: permisosIds
+        }]).select();
 
-        if (error) throw error;
+        if (error) return res.status(400).json({ statusCode: 400, intOpCode: 'USR400', message: error.message, data: [] });
 
-        res.status(201).json({
-            statusCode: 201,
-            intOpCode: 0,
-            message: "Usuario agregado desde administración exitosamente",
-            data: data
-        });
+        res.status(201).json({ statusCode: 201, intOpCode: 'USR201', message: "Usuario registrado", data: data });
     } catch (error) {
-        res.status(400).json({ statusCode: 400, intOpCode: 1, message: error.message });
+        res.status(500).json({ statusCode: 500, intOpCode: 'USR500', message: error.message, data: [] });
     }
 });
 
-// Levantar el servidor
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`Servicio ERP corriendo en http://localhost:${PORT}`);
+// ==========================================
+// 3. ENDPOINTS PROTEGIDOS (CRUD USUARIOS)
+// ==========================================
+
+// 🟢 GET /users -> Obtener todos los usuarios (Requiere: user:view)
+app.get('/users', async (req, res) => {
+    if (!hasGlobalPermission(req.user, 'user:view')) {
+        return res.status(403).json({ statusCode: 403, intOpCode: 'USR403', message: 'Falta permiso: user:view', data: [] });
+    }
+
+    try {
+        const { data: users, error } = await supabase.from('usuarios').select('id, nombre_completo, username, email, telefono, direccion, creado_en, permisos_globales');
+        if (error) throw error;
+
+        // Traemos todos los permisos del sistema para cruzarlos rápidamente
+        const { data: permisos } = await supabase.from('permisos').select('id, nombre');
+        const mapaPermisos = {};
+        if (permisos) permisos.forEach(p => mapaPermisos[p.id] = p.nombre);
+
+        // Transformamos el arreglo de UUIDs en un arreglo de textos ["user:add", "ticket:view"]
+        const usuariosMapeados = users.map(u => ({
+            ...u,
+            permisos_nombres: (u.permisos_globales || []).map(id => mapaPermisos[id]).filter(Boolean)
+        }));
+
+        res.status(200).json({ statusCode: 200, intOpCode: 'USR200', message: 'Usuarios obtenidos', data: usuariosMapeados });
+    } catch (error) {
+        res.status(500).json({ statusCode: 500, intOpCode: 'USR500', message: error.message, data: [] });
+    }
+});
+
+// 🟢 PUT /users/:id -> Editar un usuario
+app.put('/users/:id', async (req, res) => {
+    const targetUserId = req.params.id;
+    const isSelf = req.user.userId === targetUserId;
+
+    // Validación inteligente de permisos
+    if (isSelf && !hasGlobalPermission(req.user, 'user:edit:profile')) {
+        return res.status(403).json({ statusCode: 403, intOpCode: 'USR403', message: 'No tienes permiso para editar tu propio perfil (user:edit:profile)', data: [] });
+    }
+    if (!isSelf && !hasGlobalPermission(req.user, 'user:edit')) {
+        return res.status(403).json({ statusCode: 403, intOpCode: 'USR403', message: 'No tienes permiso para editar a otros usuarios (user:edit)', data: [] });
+    }
+
+    const { nombre_completo, username, email, telefono, direccion, permisos_nombres } = req.body;
+    let updateData = { nombre_completo, username, email, telefono, direccion };
+
+    // Solo alguien con user:manage puede cambiarle los permisos a alguien
+    if (permisos_nombres && hasGlobalPermission(req.user, 'user:manage')) {
+        const { data: perms } = await supabase.from('permisos').select('id').in('nombre', permisos_nombres);
+        updateData.permisos_globales = perms.map(p => p.id);
+    }
+
+    const { data, error } = await supabase.from('usuarios').update(updateData).eq('id', targetUserId).select();
+
+    if (error) return res.status(400).json({ statusCode: 400, intOpCode: 'USR400', message: error.message, data: [] });
+    res.status(200).json({ statusCode: 200, intOpCode: 'USR200', message: 'Usuario actualizado', data: data });
+});
+
+// 🟢 DELETE -> Eliminar usuario (Con limpieza en cascada)
+app.delete('/users/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // 1. Quitarlo de todos los grupos (Membresías)
+        await supabase.from('grupo_miembros').delete().eq('usuario_id', id);
+
+        // 2. Quitarle todos los permisos especiales de grupo
+        await supabase.from('grupo_usuario_permisos').delete().eq('usuario_id', id);
+
+        // 3. Desasignarlo de cualquier ticket pendiente (lo dejamos en null para que alguien más lo tome)
+        await supabase.from('tickets').update({ asignado_id: null }).eq('asignado_id', id);
+
+        // 4. Ahora sí, intentamos eliminar el registro principal del usuario
+        const { data, error } = await supabase.from('usuarios').delete().eq('id', id);
+
+        // Si lanza error aquí, es porque es CREADOR de un grupo o AUTOR de un ticket (Datos históricos intocables)
+        if (error) {
+            return res.status(400).json({
+                statusCode: 400,
+                message: 'No se puede eliminar porque ha creado tickets o grupos. En un sistema real, quítale todos los permisos para desactivarlo.'
+            });
+        }
+
+        return res.status(200).json({ statusCode: 200, message: 'Usuario eliminado correctamente' });
+    } catch (error) {
+        return res.status(500).json({ statusCode: 500, message: error.message });
+    }
+});
+
+// 🟢 GET /users/:id/permissions-summary -> Obtener resumen de poderes (Globales y por Grupo)
+app.get('/users/:id/permissions-summary', async (req, res) => {
+    if (!hasGlobalPermission(req.user, 'user:manage')) return res.status(403).json({ message: 'Denegado' });
+
+    const targetUserId = req.params.id;
+    try {
+        // 1. Obtener Permisos Globales (De la tabla usuarios)
+        const { data: user } = await supabase.from('usuarios').select('permisos_globales').eq('id', targetUserId).single();
+        let globalesNombres = [];
+        if (user && user.permisos_globales && user.permisos_globales.length > 0) {
+            const { data: perms } = await supabase.from('permisos').select('nombre').in('id', user.permisos_globales);
+            globalesNombres = perms.map(p => p.nombre);
+        }
+
+        // 2. Obtener Permisos Locales (De la tabla pivote de grupos)
+        const { data: groupPerms } = await supabase
+            .from('grupo_usuario_permisos')
+            .select('grupo_id, grupos(nombre), permisos(nombre)')
+            .eq('usuario_id', targetUserId);
+
+        // Agrupamos la respuesta por grupo para que Angular la lea fácil
+        const grouped = {};
+        if (groupPerms) {
+            groupPerms.forEach(gp => {
+                if (!grouped[gp.grupo_id]) {
+                    grouped[gp.grupo_id] = { id: gp.grupo_id, nombre: gp.grupos?.nombre || 'Desconocido', permisos: [] };
+                }
+                if (gp.permisos?.nombre) grouped[gp.grupo_id].permisos.push(gp.permisos.nombre);
+            });
+        }
+
+        res.status(200).json({
+            statusCode: 200,
+            data: { globales: globalesNombres, por_grupo: Object.values(grouped) }
+        });
+    } catch (error) {
+        res.status(500).json({ statusCode: 500, message: error.message });
+    }
+});
+
+// 🟢 GET -> Saber en qué grupos está el usuario
+app.get('/users/:id/grupos', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const { data } = await supabase.from('grupo_miembros').select('grupo_id').eq('usuario_id', id);
+        return res.status(200).json({ data: data ? data.map(g => g.grupo_id) : [] });
+    } catch (error) {
+        return res.status(500).json({ message: error.message, data: [] });
+    }
+});
+
+// 🟢 PUT -> Guardar los grupos del usuario
+app.put('/users/:id/grupos', async (req, res) => {
+    const { id } = req.params;
+    const { grupos } = req.body; // Recibimos el arreglo [id_grupo1, id_grupo2]
+
+    try {
+        // Borramos los anteriores y guardamos los nuevos
+        await supabase.from('grupo_miembros').delete().eq('usuario_id', id);
+
+        if (grupos && grupos.length > 0) {
+            const payload = grupos.map(grupo_id => ({ usuario_id: id, grupo_id: grupo_id }));
+            await supabase.from('grupo_miembros').insert(payload);
+        }
+        return res.status(200).json({ message: 'Grupos guardados' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+app.listen(3001, () => {
+    console.log('👤 Servicio de Usuarios corriendo en puerto 3001');
 });

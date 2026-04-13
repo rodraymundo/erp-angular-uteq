@@ -7,8 +7,8 @@ import { ButtonModule } from 'primeng/button';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { HttpClient } from '@angular/common/http'; // <-- HTTP
-import { PermissionsService } from '../../../services/permissions.service'; // <-- SERVICIO DE PERMISOS
+import { HttpClient } from '@angular/common/http';
+import { PermissionsService } from '../../../services/permissions.service';
 
 @Component({
   selector: 'app-login',
@@ -24,7 +24,6 @@ export class LoginComponent {
   private messageService = inject(MessageService);
   private router = inject(Router);
 
-  // Inyectamos las nuevas herramientas
   private http = inject(HttpClient);
   private permsSvc = inject(PermissionsService);
 
@@ -37,50 +36,55 @@ export class LoginComponent {
 
   onLogin() {
     if (this.loginForm.invalid) {
-      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Llena todos los campos' });
+      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Llena todos los campos correctamente' });
       return;
     }
 
     const credentials = this.loginForm.value;
-    const apiUrl = 'http://localhost:3000/login';
 
-    // Hacemos la petición POST a la API del profesor
+    // CORRECCIÓN AQUÍ: Agregamos /login a la URL del API Gateway
+    const apiUrl = 'http://localhost:3000/api/users/login';
+
     this.http.post<any>(apiUrl, credentials).subscribe({
       next: (response) => {
         try {
-          // 1. Obtenemos el token de la respuesta
+          // Extraemos el token respetando el formato JSON estricto (data[0].token)
           const token = response.data[0].token;
 
-          // 2. Decodificamos la parte central del JWT (el Payload)
-          // El token tiene 3 partes separadas por puntos. La del medio [1] tiene los datos.
+          // Decodificamos el JWT manualmente
           const payloadBase64 = token.split('.')[1];
-          const decodedPayload = atob(payloadBase64); // atob() decodifica Base64
-          const payloadJson = JSON.parse(decodedPayload); // Lo convertimos a objeto
+          // decodeURIComponent junto con escape maneja mejor caracteres especiales que atob solo
+          const decodedPayload = decodeURIComponent(escape(atob(payloadBase64)));
+          const payloadJson = JSON.parse(decodedPayload);
 
-          // 3. Extraemos los permisos que venían ocultos en el token
+          // Extraemos los permisos
           const userPerms = payloadJson.permissions || [];
 
-          console.log('Permisos desencriptados con éxito:', userPerms);
+          console.log('Permisos obtenidos del token:', userPerms);
 
-          // 4. Guardamos los permisos en el sistema
+          // Guardamos en el servicio de Angular
           this.permsSvc.setPermissions(userPerms);
 
-          // Opcional: Podrías guardar el token en localStorage si luego haces peticiones GET/PUT
+          // Guardamos el token en localStorage para futuras peticiones (OBLIGATORIO)
           localStorage.setItem('auth_token', token);
+
+          // Guardamos info básica del usuario si es necesario
+          localStorage.setItem('user_info', JSON.stringify(response.data[0].user));
 
           this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Bienvenido al sistema' });
 
-          // Redirigimos al Dashboard
           setTimeout(() => this.router.navigate(['/home']), 1000);
 
         } catch (error) {
-          console.error('Error procesando el token:', error);
+          console.error('Error procesando el token JWT:', error);
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Respuesta inválida del servidor' });
         }
       },
       error: (err) => {
         console.error('Error de Login:', err);
-        this.messageService.add({ severity: 'error', summary: 'Acceso Denegado', detail: 'Correo o contraseña incorrectos' });
+        // Manejamos el mensaje de error que viene del backend si existe
+        const msg = err.error?.message || 'Correo o contraseña incorrectos';
+        this.messageService.add({ severity: 'error', summary: 'Acceso Denegado', detail: msg });
       }
     });
   }
